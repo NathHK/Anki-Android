@@ -21,6 +21,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import anki.collection.OpChangesWithCount
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CardBrowser
 import com.ichi2.anki.CollectionManager.withCol
@@ -28,6 +29,7 @@ import com.ichi2.anki.DeckSpinnerSelection.Companion.ALL_DECKS_ID
 import com.ichi2.anki.Flag
 import com.ichi2.anki.PreviewerDestination
 import com.ichi2.anki.export.ExportDialogFragment
+import com.ichi2.anki.launchCatchingIO
 import com.ichi2.anki.model.CardStateFilter
 import com.ichi2.anki.model.CardsOrNotes
 import com.ichi2.anki.model.CardsOrNotes.*
@@ -43,12 +45,18 @@ import com.ichi2.libanki.Consts
 import com.ichi2.libanki.DeckId
 import com.ichi2.libanki.hasTag
 import com.ichi2.libanki.undoableOp
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flattenMerge
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -76,23 +84,39 @@ class CardBrowserViewModel(
     private val cacheDir: File,
     preferences: SharedPreferencesProvider
 ) : ViewModel(), SharedPreferencesProvider by preferences {
+
+    // Set by the UI to determine the number of cards to preload before returning search results
+    // This is a hack, but will be removed soon when we move to the backend for card rendering
+    // so isn't worth refactoring further
+    var numCardsToRender: Int? = null
+
+    /** A job which ensures that parallel searches do not occur */
+    var searchJob: Job? = null
+        private set
+
+    // temporary flow for refactoring - called when cards are cleared
+    val flowOfCardsUpdated = MutableSharedFlow<Unit>()
+
     val cards = CardBrowser.CardCollection<CardBrowser.CardCache>()
+
+    val flowOfSearchState = MutableSharedFlow<SearchState>()
 
     /** The CardIds of all the cards in the results */
     val allCardIds get() = cards.map { c -> c.id }
 
-    var searchTerms: String = ""
-    var restrictOnDeck: String = ""
+    var searchTerms = ""
         private set
-    var currentFlag = Flag.NONE
+    private var restrictOnDeck: String = ""
 
+    /** text in the search box (potentially unsubmitted) */
+    // this does not currently bind to the value in the UI and is only used for posting
     val flowOfFilterQuery = MutableSharedFlow<String>()
 
     /**
      * Whether the browser is working in Cards mode or Notes mode.
      * default: [CARDS]
      * */
-    val flowOfCardsOrNotes = MutableStateFlow(CARDS)
+    private val flowOfCardsOrNotes = MutableStateFlow(CARDS)
     val cardsOrNotes get() = flowOfCardsOrNotes.value
 
     // card that was clicked (not marked)
@@ -181,7 +205,7 @@ class CardBrowserViewModel(
             return CardInfoDestination(firstSelectedCard)
         }
 
-    suspend fun getInitialDeck(): DeckId {
+    private suspend fun getInitialDeck(): DeckId {
         // TODO: Handle the launch intent
         val lastDeckId = lastDeckId
         if (lastDeckId == ALL_DECKS_ID) {
@@ -206,6 +230,24 @@ class CardBrowserViewModel(
     @get:VisibleForTesting
     val initCompleted get() = flowOfInitCompleted.value
 
+    /**
+     * A search should be triggered if these properties change
+     */
+    private val searchRequested = flowOf(flowOfCardsOrNotes, flowOfDeckId)
+        .flattenMerge()
+
+    /**
+     * Emits an item when:
+     * * [initCompleted] is true
+     * * A property which defines the search has been changed ([searchRequested])
+     *
+     * @see launchSearchForCards
+     */
+    private val performSearchFlow = flowOfInitCompleted.combineTransform(searchRequested) { init, _ ->
+        if (!init) return@combineTransform
+        emit(Unit)
+    }
+
     init {
         Timber.d("CardBrowserViewModel::init")
         flowOfColumnIndex1
@@ -215,6 +257,10 @@ class CardBrowserViewModel(
         flowOfColumnIndex2
             .onEach { index -> sharedPrefs().edit { putInt(DISPLAY_COLUMN_2_KEY, index) } }
             .launchIn(viewModelScope)
+
+        performSearchFlow.onEach {
+            launchSearchForCards()
+        }.launchIn(viewModelScope)
 
         reverseDirectionFlow
             .ignoreValuesFromViewModelLaunch()
@@ -278,6 +324,7 @@ class CardBrowserViewModel(
         undoableOp { removeNotes(cids = selectedRowIds) }.count
 
     fun setCardsOrNotes(newValue: CardsOrNotes) = viewModelScope.launch {
+        Timber.i("setting mode to %s", newValue)
         withCol {
             // Change this to only change the preference on a state change
             newValue.saveToCollection()
@@ -340,19 +387,29 @@ class CardBrowserViewModel(
 
     fun selectedRowCount(): Int = selectedRows.size
 
-    fun changeCardOrder(which: SortType): ChangeCardOrderResult? {
-        if (which != order) {
-            Timber.i("updating order to %s", which)
-            sortTypeFlow.update { which }
-            reverseDirectionFlow.update { ReverseDirection(orderAsc = false) }
-            return ChangeCardOrderResult.OrderChange
-        } else if (which != SortType.NO_SORTING) {
-            Timber.i("reversing search order")
+    suspend fun changeCardOrder(which: SortType): Job? {
+        val changeType = when {
+            which != order -> ChangeCardOrder.OrderChange(which)
             // if the same element is selected again, reverse the order
-            reverseDirectionFlow.update { ReverseDirection(orderAsc = !orderAsc) }
-            return ChangeCardOrderResult.DirectionChange
+            which != SortType.NO_SORTING -> ChangeCardOrder.DirectionChange
+            else -> null
+        } ?: return null
+
+        Timber.i("updating order: %s", changeType)
+
+        return when (changeType) {
+            is ChangeCardOrder.OrderChange -> {
+                sortTypeFlow.update { which }
+                reverseDirectionFlow.update { ReverseDirection(orderAsc = false) }
+                launchSearchForCards()
+            }
+            ChangeCardOrder.DirectionChange -> {
+                reverseDirectionFlow.update { ReverseDirection(orderAsc = !orderAsc) }
+                cards.reverse()
+                flowOfSearchState.emit(SearchState.Completed)
+                null
+            }
         }
-        return null
     }
 
     fun setColumn1Index(value: Int) = flowOfColumnIndex1.update { value }
@@ -459,13 +516,14 @@ class CardBrowserViewModel(
 
     suspend fun setFilterQuery(filterQuery: String) {
         this.flowOfFilterQuery.emit(filterQuery)
+        launchSearchForCards(filterQuery)
     }
 
     suspend fun searchForMarkedNotes() = setFilterQuery("tag:marked")
 
     suspend fun searchForSuspendedCards() = setFilterQuery("is:suspended")
     suspend fun setFlagFilter(flag: Flag) {
-        currentFlag = flag
+        Timber.i("filtering to flag: %s", flag)
         val flagSearchTerm = "flag:${flag.code}"
         val searchTerms = when {
             searchTerms.contains("flag:") -> searchTerms.replaceFirst("flag:.".toRegex(), flagSearchTerm)
@@ -530,6 +588,13 @@ class CardBrowserViewModel(
         searchQueryInputFlow.update { null }
     }
 
+    fun moveSelectedCardsToDeck(deckId: DeckId): Deferred<OpChangesWithCount> = viewModelScope.async {
+        val selectedCardIds = queryAllSelectedCardIds()
+        return@async undoableOp {
+            setDeck(selectedCardIds, deckId)
+        }
+    }
+
     suspend fun updateSelectedCardsFlag(flag: Flag): List<Card> {
         val idsToChange = queryAllSelectedCardIds()
         return withCol {
@@ -545,6 +610,53 @@ class CardBrowserViewModel(
      */
     fun endMultiSelectMode() = selectNone()
 
+    suspend fun launchSearchForCards(searchQuery: String): Job? {
+        searchTerms = searchQuery
+        return launchSearchForCards()
+    }
+
+    /**
+     * @see com.ichi2.anki.searchForCards
+     */
+    @NeedsTest("Invalid searches are handled. For instance: 'and'")
+    suspend fun launchSearchForCards(): Job? {
+        if (!initCompleted) return null
+        // update the UI while we're searching
+        clearCardsList()
+
+        val query: String = if (searchTerms.contains("deck:")) {
+            "($searchTerms)"
+        } else {
+            if ("" != searchTerms) "$restrictOnDeck($searchTerms)" else restrictOnDeck
+        }
+
+        searchJob?.cancel()
+        searchJob = launchCatchingIO(
+            errorMessageHandler = { error -> flowOfSearchState.emit(SearchState.Error(error)) }
+        ) {
+            flowOfSearchState.emit(SearchState.Searching)
+            Timber.d("performing search: '%s'", query)
+            val cards = com.ichi2.anki.searchForCards(query, order.toSortOrder(), cardsOrNotes)
+            Timber.d("Search returned %d card(s)", cards.size)
+
+            // Render the first few items
+            val cardsToRender = min((numCardsToRender ?: 0), cards.size)
+            for (i in 0 until cardsToRender) {
+                ensureActive()
+                cards[i].load(false, column1Index, column2Index)
+            }
+            ensureActive()
+            this@CardBrowserViewModel.cards.replaceWith(cards)
+            flowOfSearchState.emit(SearchState.Completed)
+        }
+        return searchJob!!
+    }
+
+    private suspend fun clearCardsList() {
+        cards.reset()
+        flowOfCardsUpdated.emit(Unit)
+    }
+
     companion object {
         const val DISPLAY_COLUMN_1_KEY = "cardBrowserColumn1"
         const val DISPLAY_COLUMN_2_KEY = "cardBrowserColumn2"
@@ -559,10 +671,31 @@ class CardBrowserViewModel(
         }
     }
 
-    /** temporary result class for [changeCardOrder] */
-    enum class ChangeCardOrderResult {
-        OrderChange,
-        DirectionChange
+    private sealed interface ChangeCardOrder {
+        data class OrderChange(val sortType: SortType) : ChangeCardOrder
+        data object DirectionChange : ChangeCardOrder
+    }
+
+    /** Whether [CardBrowserViewModel] is processing a search */
+    sealed interface SearchState {
+        /** The class is initializing */
+        data object Initializing : SearchState
+
+        /** A search is in progress */
+        data object Searching : SearchState
+
+        /** A search has been completed */
+        data object Completed : SearchState
+
+        /**
+         * A search error, for instance:
+         *
+         * [net.ankiweb.rsdroid.BackendException.BackendSearchException]
+         *
+         * Invalid search: an `and` was found but it is not connecting two search terms.
+         * If you want to search for the word itself, wrap it in double quotes: `"and"`.
+         */
+        data class Error(val error: String) : SearchState
     }
 }
 

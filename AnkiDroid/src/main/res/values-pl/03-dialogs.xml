@@ -61,7 +61,6 @@
         <item quantity="other">%d kart przestawiono</item>
     </plurals>
     <string name="reset_card_dialog_title">Reset postępu karty</string>
-    <string name="reset_card_dialog_message">Ta karta zostanie umieszczona na końcu kolejki nowych kart.</string>
     <plurals name="reset_cards_dialog_acknowledge">
         <item quantity="one">%d karta zresetowana</item>
         <item quantity="few">%d karty zresetowane</item>
@@ -69,27 +68,12 @@
         <item quantity="other">%d kart zresetowano</item>
     </plurals>
     <!-- Reschedule Card Dialog -->
-    <plurals name="reschedule_cards_dialog_title_new">
-        <item quantity="one">Zmień harmonogram %d karty</item>
-        <item quantity="few">Zmień harmonogram %d kart</item>
-        <item quantity="many">Zmień harmonogram %d kart</item>
-        <item quantity="other">Zmień harmonogram %d kart</item>
-    </plurals>
-    <plurals name="reschedule_card_dialog_interval">
-        <item quantity="one">Aktualna przerwa: %d dzień</item>
-        <item quantity="few">Aktualna przerwa: %d dni</item>
-        <item quantity="many">Aktualna przerwa: %d dni</item>
-        <item quantity="other">Aktualna przerwa: %d dni</item>
-    </plurals>
-    <string name="reschedule_card_dialog_message">Ustaw ponowne pokazanie się na x dni:</string>
     <plurals name="reschedule_cards_dialog_acknowledge">
         <item quantity="one">%d karta ponownie zaplanowana</item>
         <item quantity="few">%d karty ponownie zaplanowane</item>
         <item quantity="many">%d kart ponownie zaplanowano</item>
         <item quantity="other">%d kart ponownie zaplanowano</item>
     </plurals>
-    <string name="reschedule_card_dialog_new_card_warning">Karta zostanie ponownie zaplanowana. Ponowne zaplanowanie spowoduje zmianę statusu karty z \"nowa\" na \"powtarzana\". Użyj opcji \"przestaw kartę\" by zmienić pozycję nowej karty karty w kolejce bez zmiany jej statusu</string>
-    <string name="reschedule_card_dialog_warning_ease_reset">Ponowne zaplanowanie karty spowoduje także zresetowanie poziomu łatwości (zostanie ustawiona na: %d%%)</string>
     <string name="answering_error_title">Błąd bazy danych</string>
     <string name="answering_error_message">Wystąpił błąd podczas zapisywania do kolekcji. Powodem może być uszkodzenie bazy danych albo niewystarczająca ilość miejsca na dysku.\n\nJeśli błąd ten występuje często, spróbuj użyć opcji \"sprawdź bazę danych\" oraz naprawić kolekcję lub przywróć ją z kopii zapasowej (by tego dokonać kliknij „opcje”).\n\nRównie dobrze może to być też błąd AnkiDroid; zgłoś go abyśmy mogli to sprawdzić.</string>
     <string name="answering_error_report">Zgłoś błąd</string>
@@ -121,7 +105,7 @@
     <string name="dialog_keep">Keep</string>
     <string name="dialog_remove">Remove</string>
     <string name="dialog_continue">Kontynuuj</string>
-    <string name="dialog_processing">Przetwarzanie...</string>
+    <string name="dialog_processing">Przetwarzanie&#8230;</string>
     <string name="dialog_positive_create" comment="Create a new collection, probably erasing the previous one, may be necessary in case of error.">Utwórz</string>
     <string name="dialog_positive_delete">Usuń</string>
     <!-- Currently unsued, should be useful in the future -->
@@ -260,4 +244,28 @@
     <string name="dismiss_backup_warning_upgrade">        Ze względu na zmiany prywatności w systemie Android Twoje dane i automatyczne kopie zapasowe będą niedostępne, jeśli aplikacja zostanie odinstalowana
     </string>
     <string name="deck_already_exists">Deck already exists</string>
+    <string name="create_deck_numeric_hint">If you have deck ordering issues (e.g. ‘10’ appears before ‘2’), replace ‘2’ with ‘02’</string>
+    <!-- Set Due Date -->
+    <string name="set_due_date_match_interval" comment="when setting a card\'s due date, this checkbox also changes the interval of the card">Set interval to same value</string>
+    <plurals name="set_due_date_single_day_label" comment="a date control is provided afterwards">
+        <item quantity="one">Show card in</item>
+        <item quantity="few">Show cards in</item>
+        <item quantity="many">Show cards in</item>
+        <item quantity="other">Show cards in</item>
+    </plurals>
+    <plurals name="set_due_date_range_label" comment="a date control is provided afterwards">
+        <item quantity="one">Show card in range</item>
+        <item quantity="few">Show cards in range</item>
+        <item quantity="many">Show cards in range</item>
+        <item quantity="other">Show cards in range</item>
+    </plurals>
+    <plurals name="set_due_date_label_suffix" comment="a suffix on a text field allowing a user to enter a number of days">
+        <item quantity="one">day</item>
+        <item quantity="few">days</item>
+        <item quantity="many">days</item>
+        <item quantity="other">days</item>
+    </plurals>
+    <string name="range_delimiter" comment="Placed between two input boxes to denote a range">–</string>
+    <string name="set_due_date_range_start" comment="\'Set Due Date\' may change the due date of a card to a random number of days in the future. This labels the \'minimum\' value of this range (inclusive)">From</string>
+    <string name="set_due_date_range_end" comment="\'Set Due Date\' may change the due date of a card to a random number of days in the future. This labels the \'maximum\' value of this range (inclusive)">To</string>
 </resources>

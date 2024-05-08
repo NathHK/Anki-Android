@@ -163,8 +163,8 @@
     <string name="vertical_centering_summ">垂直置中卡片內容</string>
     <string name="pref_double_tap_time_interval" maxLength="41">雙擊的時間間隔 (毫秒)</string>
     <string name="pref_double_tap_time_interval_summary">如果時間不到，按二次答案按鍵是無效的，這樣可以避免不小心雙擊按鍵。</string>
-    <string name="pref_show_answer_long_press" maxLength="41">Show answer long-press time (ms)</string>
-    <string name="pref_show_answer_long_press_summary">Minimum long-press time before the show answer button will register a touch. May reduce the chance of accidental extra button presses. Default is 0ms</string>
+    <string name="pref_show_answer_long_press_time" maxLength="41">Show answer long-press time</string>
+    <string name="pref_show_answer_long_press_time_summary">Minimum pressing time before the show answer button registers a touch.</string>
     <string name="show_estimates" maxLength="41">顯示按鈕的時間</string>
     <string name="show_estimates_summ">在答案按鈕上顯示下一次複習的時間</string>
     <string name="show_large_answer_buttons" maxLength="41">顯示大的答案按鍵</string>
@@ -178,7 +178,6 @@
     <string name="use_current" maxLength="41">存放新卡片的牌組</string>
     <string name="learn_cutoff" maxLength="41">提早學習上限</string>
     <string name="time_limit" maxLength="41">時間盒的時間上限</string>
-    <string name="new_timezone" maxLength="41">時區變更處理</string>
     <string name="day_offset_with_description" maxLength="41">下一天開始的時間</string>
     <plurals name="day_offset_summ" comment="%d is going to be replaced with the number of hours past midnight. It can be replaced if something else suits better the translation">
         <item quantity="other">%d hours past midnight</item>

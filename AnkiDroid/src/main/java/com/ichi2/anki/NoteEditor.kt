@@ -430,9 +430,9 @@ class NoteEditor : AnkiActivity(), DeckSelectionListener, SubtitleListener, Tags
         startMultimediaFieldEditor(0, note, imageUri)
     }
 
-    override fun onSaveInstanceState(savedInstanceState: Bundle) {
-        addInstanceStateToBundle(savedInstanceState)
-        super.onSaveInstanceState(savedInstanceState)
+    override fun onSaveInstanceState(outState: Bundle) {
+        addInstanceStateToBundle(outState)
+        super.onSaveInstanceState(outState)
     }
 
     private fun addInstanceStateToBundle(savedInstanceState: Bundle) {
@@ -650,7 +650,7 @@ class NoteEditor : AnkiActivity(), DeckSelectionListener, SubtitleListener, Tags
         // set focus to FieldEditText 'first' on startup like Anki desktop
         if (editFields != null && !editFields!!.isEmpty()) {
             // EXTRA_TEXT_FROM_SEARCH_VIEW takes priority over other intent inputs
-            if (getTextFromSearchView != null && getTextFromSearchView.isNotEmpty()) {
+            if (!getTextFromSearchView.isNullOrEmpty()) {
                 editFields!!.first!!.setText(getTextFromSearchView)
             }
             editFields!!.first!!.requestFocus()
@@ -746,11 +746,12 @@ class NoteEditor : AnkiActivity(), DeckSelectionListener, SubtitleListener, Tags
         }
 
         // 7573: Ctrl+Shift+[Num] to select a field
-        if (event.isCtrlPressed && event.isShiftPressed && KeyUtils.isDigit(event)) {
-            val digit = KeyUtils.getDigit(event)
+        if (event.isCtrlPressed && event.isShiftPressed) {
             // map: '0' -> 9; '1' to 0
-            val indexBase10 = ((digit - 1) % 10 + 10) % 10
-            selectFieldIndex(indexBase10)
+            KeyUtils.getDigit(event)?.let { digit ->
+                val indexBase10 = ((digit - 1) % 10 + 10) % 10
+                selectFieldIndex(indexBase10)
+            }
         }
         return super.onKeyUp(keyCode, event)
     }
@@ -814,9 +815,9 @@ class NoteEditor : AnkiActivity(), DeckSelectionListener, SubtitleListener, Tags
         }
     }
 
-    private fun addFromAedict(extra_text: String?): Boolean {
+    private fun addFromAedict(extraText: String?): Boolean {
         var category: String
-        val notepadLines = extra_text!!.split("\n".toRegex()).toTypedArray()
+        val notepadLines = extraText!!.split("\n".toRegex()).toTypedArray()
         for (i in notepadLines.indices) {
             if (notepadLines[i].startsWith("[") && notepadLines[i].endsWith("]")) {
                 category = notepadLines[i].substring(1, notepadLines[i].length - 1)
@@ -1189,7 +1190,7 @@ class NoteEditor : AnkiActivity(), DeckSelectionListener, SubtitleListener, Tags
             return sp.roundToInt().toString()
         }
 
-    fun addNewNote() {
+    private fun addNewNote() {
         openNewNoteEditor { }
     }
 

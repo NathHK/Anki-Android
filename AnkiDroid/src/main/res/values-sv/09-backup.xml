@@ -50,14 +50,14 @@
     <string name="backup_new_collection">Ny samling</string>
     <string name="backup_del_collection">Ta bort samling och skapa en ny</string>
     <string name="backup_del_collection_question">Är du säker att du vill ta bort denna samling och skapa en ny? Detta kommer ta bort alla framsteg samt radera alla kort!</string>
-    <string name="backup_one_way_sync_from_server">One-way sync from server</string>
+    <string name="backup_one_way_sync_from_server">Envägssynkning från servern</string>
     <string name="backup_full_sync_from_server_question">Är du säker att du vill skriva över din samling med den från AnkiWeb? Detta kommer ta bort alla framsteg och ändrad information sedan din senaste synkning!</string>
     <string name="error_handling_title">Felhantering</string>
     <string name="error_handling_options" comment="In a warning message, the label of the suggested action that the user should take">Alternativ</string>
     <string name="backup_retry_opening">Prova att öppna igen</string>
     <string name="backup_error_menu_repair">Reparera databas</string>
     <!-- Collection used to be called deck. Name is kept for consistency with translation software -->
-    <string name="backup_repair_deck_progress">Reparerar databas.\nVar vänlig vänta...</string>
+    <string name="backup_repair_deck_progress">Reparerar databas.\nVar vänlig vänta&#8230;</string>
     <string name="backup_invalid_file_error">Den valda återställningsfilen var ogiltig</string>
     <string name="backup_restore_select_title">Välj säkerhetskopia att återställa</string>
     <string name="backup_restore_no_backups">Inga säkerhetskopior för samlingen finns på den här enheten. Om du har säkerhetskopior på din stationära dator, kopiera dem manuellt till din AnkiDroid-mapp</string>

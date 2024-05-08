@@ -32,6 +32,7 @@ import android.hardware.camera2.CameraManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.CancellationSignal
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import android.text.format.Formatter
@@ -59,8 +60,8 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CrashReportService
 import com.ichi2.anki.DrawingActivity
 import com.ichi2.anki.R
-import com.ichi2.anki.UIUtils
 import com.ichi2.anki.multimediacard.activity.MultimediaEditFieldActivity
+import com.ichi2.anki.showThemedToast
 import com.ichi2.annotations.NeedsTest
 import com.ichi2.ui.FixedEditText
 import com.ichi2.utils.*
@@ -100,12 +101,12 @@ class BasicImageFieldController : FieldControllerBase(), IFieldController {
     @VisibleForTesting
     lateinit var registryToUse: ActivityResultRegistry
 
-    private lateinit var takePictureLauncher: ActivityResultLauncher<Intent?>
+    private lateinit var takePictureLauncher: ActivityResultLauncher<Intent>
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    lateinit var selectImageLauncher: ActivityResultLauncher<Intent?>
+    lateinit var selectImageLauncher: ActivityResultLauncher<Intent>
 
-    private lateinit var drawingLauncher: ActivityResultLauncher<Intent?>
+    private lateinit var drawingLauncher: ActivityResultLauncher<Intent>
 
     private inner class BasicImageFieldControllerResultCallback(
         private val onSuccess: (result: ActivityResult) -> Unit,
@@ -119,7 +120,7 @@ class BasicImageFieldController : FieldControllerBase(), IFieldController {
 
                 // Some apps send this back with app-specific data, direct the user to another app
                 if (result.resultCode >= Activity.RESULT_FIRST_USER) {
-                    UIUtils.showThemedToast(_activity, _activity.getString(R.string.activity_result_unexpected), true)
+                    showThemedToast(_activity, _activity.getString(R.string.activity_result_unexpected), true)
                 }
                 return
             }
@@ -156,19 +157,13 @@ class BasicImageFieldController : FieldControllerBase(), IFieldController {
         viewModel = viewModel.replaceNullValues(_field, _activity)
 
         imagePreview = ImageView(_activity)
-        val externalCacheDirRoot = context.externalCacheDir
-        if (externalCacheDirRoot == null) {
-            Timber.e("createUI() unable to get external cache directory")
+
+        ankiCacheDirectory = FileUtil.getAnkiCacheDirectory(context, "temp-photos")
+        if (ankiCacheDirectory == null) {
             showSomethingWentWrong()
+            Timber.e("createUI() failed to get cache directory")
             return
         }
-        val externalCacheDir = File(externalCacheDirRoot.absolutePath + "/temp-photos")
-        if (!externalCacheDir.exists() && !externalCacheDir.mkdir()) {
-            Timber.e("createUI() externalCacheDir did not exist and could not be created")
-            showSomethingWentWrong()
-            return
-        }
-        ankiCacheDirectory = externalCacheDir.absolutePath
 
         val p = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -234,9 +229,7 @@ class BasicImageFieldController : FieldControllerBase(), IFieldController {
         cropImageRequest = registryToUse.register(CROP_IMAGE_LAUNCHER_KEY, CropImageContract()) { cropResult ->
             if (cropResult.isSuccessful) {
                 imageFileSizeWarning.visibility = View.GONE
-                if (cropResult != null) {
-                    handleCropResult(cropResult)
-                }
+                handleCropResult(cropResult)
                 setPreviewImage(viewModel.imagePath, maxImageSize)
             } else {
                 if (!previousImagePath.isNullOrEmpty()) {
@@ -432,7 +425,7 @@ class BasicImageFieldController : FieldControllerBase(), IFieldController {
 
     private fun showSomethingWentWrong() {
         try {
-            UIUtils.showThemedToast(_activity, _activity.resources.getString(R.string.multimedia_editor_something_wrong), false)
+            showThemedToast(_activity, _activity.resources.getString(R.string.multimedia_editor_something_wrong), false)
         } catch (e: Exception) {
             // ignore. A NullPointerException may occur in Robolectric
             Timber.w(e, "Failed to display toast")
@@ -440,7 +433,7 @@ class BasicImageFieldController : FieldControllerBase(), IFieldController {
     }
 
     private fun showSVGPreviewToast() {
-        UIUtils.showThemedToast(_activity, _activity.resources.getString(R.string.multimedia_editor_svg_preview), false)
+        showThemedToast(_activity, _activity.resources.getString(R.string.multimedia_editor_svg_preview), false)
     }
 
     private fun handleSelectImageIntent(data: Intent?) {
@@ -764,7 +757,7 @@ class BasicImageFieldController : FieldControllerBase(), IFieldController {
         Timber.d("getImageUri for data %s", data)
         val uri = data.data
         if (uri == null) {
-            UIUtils.showThemedToast(context, context.getString(R.string.select_image_failed), false)
+            showThemedToast(context, context.getString(R.string.select_image_failed), false)
         }
         return uri
     }
@@ -832,7 +825,8 @@ class BasicImageFieldController : FieldControllerBase(), IFieldController {
     private fun getImageNameFromContentResolver(context: Context, uri: Uri, selection: String?): String? {
         Timber.d("getImageNameFromContentResolver() %s", uri)
         val filePathColumns = arrayOf(MediaStore.MediaColumns.DISPLAY_NAME)
-        ContentResolverCompat.query(context.contentResolver, uri, filePathColumns, selection, null, null, null).use { cursor ->
+        val signal: CancellationSignal? = null // needed to fix the type to non-deprecated android.os.CancellationSignal for use below
+        ContentResolverCompat.query(context.contentResolver, uri, filePathColumns, selection, null, null, signal).use { cursor ->
 
             if (cursor == null) {
                 Timber.w("getImageNameFromContentResolver() cursor was null")

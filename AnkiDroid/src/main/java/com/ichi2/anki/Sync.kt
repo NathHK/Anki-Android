@@ -20,11 +20,14 @@ import android.app.Activity.RESULT_OK
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.Resources
+import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import anki.sync.SyncAuth
 import anki.sync.SyncCollectionResponse
 import anki.sync.syncAuth
+import com.google.android.material.snackbar.Snackbar
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.dialogs.DialogHandlerMessage
@@ -41,7 +44,15 @@ import com.ichi2.libanki.syncLogin
 import com.ichi2.libanki.utils.TimeManager
 import com.ichi2.preferences.VersatileTextWithASwitchPreference
 import com.ichi2.utils.NetworkUtils
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.ankiweb.rsdroid.Backend
+import net.ankiweb.rsdroid.exceptions.BackendInterruptedException
 import net.ankiweb.rsdroid.exceptions.BackendSyncException
 import timber.log.Timber
 
@@ -150,11 +161,12 @@ fun DeckPicker.handleNewSync(
             throw exc
         }
         withCol { notetypes._clear_cache() }
+        setLastSyncTimeToNow()
         refreshState()
     }
 }
 
-fun MyAccount.handleNewLogin(username: String, password: String) {
+fun MyAccount.handleNewLogin(username: String, password: String, resultLauncher: ActivityResultLauncher<String>) {
     val endpoint = getEndpoint(this)
     launchCatchingTask {
         val auth = try {
@@ -175,6 +187,7 @@ fun MyAccount.handleNewLogin(username: String, password: String) {
         }
         updateLogin(baseContext, username, auth.hkey)
         setResult(RESULT_OK)
+        MyAccount.checkNotificationPermission(this@handleNewLogin, resultLauncher)
         finish()
     }
 }
@@ -187,7 +200,7 @@ private fun updateLogin(context: Context, username: String, hkey: String?) {
     }
 }
 
-private fun cancelSync(backend: Backend) {
+fun cancelSync(backend: Backend) {
     backend.setWantsAbort()
     backend.abortSync()
 }
@@ -339,6 +352,52 @@ fun DeckPicker.shouldFetchMedia(preferences: SharedPreferences): Boolean {
         (shouldFetchMedia == onlyIfUnmetered && !NetworkUtils.isActiveNetworkMetered())
 }
 
+suspend fun monitorMediaSync(
+    deckPicker: DeckPicker
+) {
+    val backend = CollectionManager.getBackend()
+    val scope = CoroutineScope(Dispatchers.IO)
+
+    val dialog = withContext(Dispatchers.Main) {
+        AlertDialog.Builder(deckPicker)
+            .setTitle(TR.syncMediaLogTitle())
+            .setMessage("")
+            .setPositiveButton(R.string.dialog_continue) { _, _ ->
+                scope.cancel()
+            }
+            .setNegativeButton(R.string.dialog_cancel) { _, _ ->
+                cancelMediaSync(backend)
+            }
+            .show()
+    }
+
+    fun showMessage(msg: String) = deckPicker.showSnackbar(msg, Snackbar.LENGTH_SHORT)
+
+    scope.launch {
+        try {
+            while (true) {
+                // this will throw if the sync exited with an error
+                val resp = backend.mediaSyncStatus()
+                if (!resp.active) {
+                    break
+                }
+                val text = resp.progress.run { "$added\n$removed\n$checked" }
+                dialog.setMessage(text)
+                delay(100)
+            }
+            showMessage(TR.syncMediaComplete())
+        } catch (_: BackendInterruptedException) {
+            showMessage(TR.syncMediaAborted())
+        } catch (_: CancellationException) {
+            // do nothing
+        } catch (_: Exception) {
+            showMessage(TR.syncMediaFailed())
+        } finally {
+            dialog.dismiss()
+        }
+    }
+}
+
 /**
  * Called from [DeckPicker.onMediaSyncCompleted] -> [DeckPicker.migrate] if the app is backgrounded
  */
@@ -380,6 +439,12 @@ fun DeckPicker.showSyncLogMessage(@StringRes messageResource: Int, syncMessage: 
             val res = AnkiDroidApp.appResources
             showSimpleMessageDialog(title = res.getString(messageResource), message = syncMessage)
         }
+    }
+}
+
+fun Context.setLastSyncTimeToNow() {
+    sharedPrefs().edit {
+        putLong("lastSyncTime", TimeManager.time.intTimeMS())
     }
 }
 

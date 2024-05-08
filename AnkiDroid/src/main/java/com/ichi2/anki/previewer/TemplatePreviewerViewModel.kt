@@ -24,7 +24,7 @@ import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.NotetypeFile
 import com.ichi2.anki.asyncIO
-import com.ichi2.anki.cardviewer.SoundPlayer
+import com.ichi2.anki.cardviewer.CardMediaPlayer
 import com.ichi2.anki.launchCatchingIO
 import com.ichi2.anki.reviewer.CardSide
 import com.ichi2.anki.utils.ext.ifNullOrEmpty
@@ -41,8 +41,8 @@ import org.jetbrains.annotations.VisibleForTesting
 
 class TemplatePreviewerViewModel(
     arguments: TemplatePreviewerArguments,
-    soundPlayer: SoundPlayer
-) : CardViewerViewModel(soundPlayer) {
+    cardMediaPlayer: CardMediaPlayer
+) : CardViewerViewModel(cardMediaPlayer) {
     private val notetype = arguments.notetype
     private val fillEmpty = arguments.fillEmpty
     private val isCloze = notetype.isCloze
@@ -58,7 +58,7 @@ class TemplatePreviewerViewModel(
     private val note: Deferred<Note>
     private val templateNames: Deferred<List<String>>
     private val clozeOrds: Deferred<List<Int>>?
-    override var currentCard: Deferred<Card>
+    override lateinit var currentCard: Deferred<Card>
 
     init {
         note = asyncIO {
@@ -73,17 +73,7 @@ class TemplatePreviewerViewModel(
                 tags = arguments.tags
             }
         }
-        currentCard = asyncIO {
-            val note = note.await()
-            withCol {
-                note.ephemeralCard(
-                    col = this,
-                    ord = ordFlow.value,
-                    customNoteType = notetype,
-                    fillEmpty = fillEmpty
-                )
-            }
-        }
+
         if (isCloze) {
             val clozeNumbers = asyncIO {
                 val note = note.await()
@@ -107,17 +97,39 @@ class TemplatePreviewerViewModel(
     ********************************************************************************************* */
 
     override fun onPageFinished(isAfterRecreation: Boolean) {
+        suspend fun setupCurrentCard() {
+            ordFlow.collectLatest { ord ->
+                currentCard = asyncIO {
+                    val note = note.await()
+                    withCol {
+                        note.ephemeralCard(
+                            col = this,
+                            ord = ord,
+                            customNoteType = notetype,
+                            fillEmpty = fillEmpty
+                        )
+                    }
+                }
+                showQuestion()
+                loadAndPlaySounds(CardSide.QUESTION)
+            }
+        }
+
         if (isAfterRecreation) {
             launchCatchingIO {
-                if (showingAnswer.value) showAnswerInternal() else showQuestion()
+                if (this::currentCard.isInitialized) {
+                    // this occurs on config change
+                    if (showingAnswer.value) showAnswerInternal() else showQuestion()
+                } else {
+                    // this occurs if 'Don't keep activities' is set
+                    // TODO: We should persist showingAnswer to SavedStateHandle
+                    setupCurrentCard()
+                }
             }
             return
         }
         launchCatchingIO {
-            ordFlow.collectLatest {
-                showQuestion()
-                loadAndPlaySounds(CardSide.QUESTION)
-            }
+            setupCurrentCard()
         }
     }
 
@@ -163,8 +175,8 @@ class TemplatePreviewerViewModel(
     ********************************************************************************************* */
 
     private suspend fun loadAndPlaySounds(side: CardSide) {
-        soundPlayer.loadCardSounds(currentCard.await())
-        soundPlayer.playAllSoundsForSide(side)
+        cardMediaPlayer.loadCardSounds(currentCard.await())
+        cardMediaPlayer.playAllSoundsForSide(side)
     }
 
     // https://github.com/ankitects/anki/blob/df70564079f53e587dc44f015c503fdf6a70924f/qt/aqt/clayout.py#L579
@@ -197,10 +209,10 @@ class TemplatePreviewerViewModel(
     }
 
     companion object {
-        fun factory(arguments: TemplatePreviewerArguments, soundPlayer: SoundPlayer): ViewModelProvider.Factory {
+        fun factory(arguments: TemplatePreviewerArguments, cardMediaPlayer: CardMediaPlayer): ViewModelProvider.Factory {
             return viewModelFactory {
                 initializer {
-                    TemplatePreviewerViewModel(arguments, soundPlayer)
+                    TemplatePreviewerViewModel(arguments, cardMediaPlayer)
                 }
             }
         }

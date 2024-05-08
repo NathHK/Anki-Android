@@ -59,27 +59,15 @@
         <item quantity="other">%d картите са преместени</item>
     </plurals>
     <string name="reset_card_dialog_title">Начално състояние на прогреса на картата</string>
-    <string name="reset_card_dialog_message">Тази карта ще бъде поставен в края на опашката на новите карти</string>
     <plurals name="reset_cards_dialog_acknowledge">
         <item quantity="one">%d card reset</item>
         <item quantity="other">%d карти са нулирани</item>
     </plurals>
     <!-- Reschedule Card Dialog -->
-    <plurals name="reschedule_cards_dialog_title_new">
-        <item quantity="one">Препланиране на %d карта</item>
-        <item quantity="other">Reschedule %d cards</item>
-    </plurals>
-    <plurals name="reschedule_card_dialog_interval">
-        <item quantity="one">Текущия интервал: %d ден</item>
-        <item quantity="other">Текущия интервал: %d дни</item>
-    </plurals>
-    <string name="reschedule_card_dialog_message">Повторно планиране за преглед след x дни:</string>
     <plurals name="reschedule_cards_dialog_acknowledge">
         <item quantity="one">%d карта е препланирана</item>
         <item quantity="other">%d карти са препланирани</item>
     </plurals>
-    <string name="reschedule_card_dialog_new_card_warning">Планира се нова карта. Препланиране също променя нови карти на повторяющи се. Използвайте опцията \'преместване на карта\' за да промените позиция на нова карта в опашката</string>
-    <string name="reschedule_card_dialog_warning_ease_reset">Препланиране също определя как планировчикът ще третира картата (лекота ще бъди %d%%)</string>
     <string name="answering_error_title">Грешка в базата данни</string>
     <string name="answering_error_message">Писането в колекцията е неуспешна. Базата данни може да е повредена или може да няма свободно пространство на диска.\n\nАко това се случва по-често, опитайте да проверите базата данни, да поправите колекцията или да възстановите я от резервно копия. Докоснете \"Опции\" за това.\n\Това може да е грешка в AnkiDroid; Моля, съобщете за тази грешка, да можем да я проверим.</string>
     <string name="answering_error_report">Доклад грешки</string>
@@ -111,7 +99,7 @@
     <string name="dialog_keep">Keep</string>
     <string name="dialog_remove">Remove</string>
     <string name="dialog_continue">Продължи</string>
-    <string name="dialog_processing">Обработване...</string>
+    <string name="dialog_processing">Обработване&#8230;</string>
     <string name="dialog_positive_create" comment="Create a new collection, probably erasing the previous one, may be necessary in case of error.">Създай</string>
     <string name="dialog_positive_delete">Изтрий</string>
     <!-- Currently unsued, should be useful in the future -->
@@ -246,4 +234,22 @@
     <string name="dismiss_backup_warning_upgrade">        Due to Android privacy changes, your data and automated backups will be inaccessible if the app is uninstalled
     </string>
     <string name="deck_already_exists">Deck already exists</string>
+    <string name="create_deck_numeric_hint">If you have deck ordering issues (e.g. ‘10’ appears before ‘2’), replace ‘2’ with ‘02’</string>
+    <!-- Set Due Date -->
+    <string name="set_due_date_match_interval" comment="when setting a card\'s due date, this checkbox also changes the interval of the card">Set interval to same value</string>
+    <plurals name="set_due_date_single_day_label" comment="a date control is provided afterwards">
+        <item quantity="one">Show card in</item>
+        <item quantity="other">Show cards in</item>
+    </plurals>
+    <plurals name="set_due_date_range_label" comment="a date control is provided afterwards">
+        <item quantity="one">Show card in range</item>
+        <item quantity="other">Show cards in range</item>
+    </plurals>
+    <plurals name="set_due_date_label_suffix" comment="a suffix on a text field allowing a user to enter a number of days">
+        <item quantity="one">day</item>
+        <item quantity="other">days</item>
+    </plurals>
+    <string name="range_delimiter" comment="Placed between two input boxes to denote a range">–</string>
+    <string name="set_due_date_range_start" comment="\'Set Due Date\' may change the due date of a card to a random number of days in the future. This labels the \'minimum\' value of this range (inclusive)">From</string>
+    <string name="set_due_date_range_end" comment="\'Set Due Date\' may change the due date of a card to a random number of days in the future. This labels the \'maximum\' value of this range (inclusive)">To</string>
 </resources>

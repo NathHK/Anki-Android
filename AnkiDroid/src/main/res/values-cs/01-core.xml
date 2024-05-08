@@ -59,7 +59,6 @@
     <!-- DeckPicker.kt -->
     <string name="expand">Rozbalit</string>
     <string name="collapse">Sbalit</string>
-    <string name="study_more">Study more</string>
     <plurals name="reviewer_window_title">
         <item quantity="one">Zbývá %d minuta</item>
         <item quantity="few">Zbývají %d minuty</item>
@@ -141,12 +140,10 @@
     <string name="empty_filtered_deck">Vyprazdňuje se filtrovaný balíček&#8230;</string>
     <string name="custom_study_deck_name">Dodatečné procvičování</string>
     <string name="custom_study_deck_exists">Nejdříve přejmenujte stávající balíček vlastního studia</string>
-    <string name="empty_deck">Tento balíček je prázdný</string>
     <string name="search_deck" comment="Deck search for selecting it">Hledat balíček</string>
+    <string name="empty_deck">Tento balíček je prázdný</string>
     <string name="search_for_download_deck" comment="Deck search value for downloading deck">Hledat balíček</string>
     <string name="invalid_deck_name">Neplatný název balíčku</string>
-    <string name="studyoptions_limit_reached">Daily study limit reached</string>
-    <string name="studyoptions_empty_schedule">No cards scheduled to study</string>
     <string name="studyoptions_congrats_finished">Blahopřejeme! Prozatím máte hotovo.</string>
     <string name="studyoptions_no_cards_due">Žádné karty ještě nejsou ke zkoušení</string>
     <string name="sd_card_not_mounted">Zařízení úložiště není připojeno</string>
@@ -156,7 +153,7 @@
     <string name="continue_sync" tools:ignore="UnusedResources">Pokračovat v synchronizaci</string>
     <string name="sync_cancelled" tools:ignore="UnusedResources">Synchronizace přrušena</string>
     <string name="sync_cancel_message" tools:ignore="UnusedResources">Přerušuje se&#8230;\nMůže to chvíli trvat.</string>
-    <string name="syncing_media">Syncing media</string>
+    <string name="syncing_media">Synchronizace multimédií</string>
     <string name="export_deck">Export balíčku</string>
     <string name="nothing">Nic</string>
     <!-- Card template editor -->
@@ -268,4 +265,5 @@
     <string name="storage_access_summary">Uloží vaši kolekci na bezpečné místo, které nebude odstraněno, pokud bude aplikace odinstalována</string>
     <string name="all_files_access_title" comment="Name of the “All files access” permission from Android 10 and after">Přístup ke všem souborům</string>
     <string name="image_occlusion">Okluze obrázku</string>
+    <string name="remove_account" comment="open a website to start the deletion of an AnkiWeb account">Odebrat účet</string>
 </resources>

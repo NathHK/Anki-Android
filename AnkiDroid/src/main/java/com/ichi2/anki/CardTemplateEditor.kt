@@ -31,6 +31,8 @@ import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
@@ -151,6 +153,7 @@ open class CardTemplateEditor : AnkiActivity(), DeckSelectionListener {
     }
 
     @Suppress("deprecation") // onBackPressed
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (modelHasChanged()) {
             showDiscardChangesDialog()
@@ -159,6 +162,7 @@ open class CardTemplateEditor : AnkiActivity(), DeckSelectionListener {
         }
     }
 
+    @Suppress("DEPRECATION")
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == android.R.id.home) {
             onBackPressed()
@@ -365,6 +369,18 @@ open class CardTemplateEditor : AnkiActivity(), DeckSelectionListener {
                 }
             }
             editorEditText.addTextChangedListener(templateEditorWatcher)
+
+            /* When keyboard is visible, hide the bottom navigation bar to allow viewing
+            of all template text when resize happens */
+            ViewCompat.setOnApplyWindowInsetsListener(mainView) { _, insets ->
+                val imeIsVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+                if (imeIsVisible) {
+                    bottomNavigation.visibility = View.GONE
+                } else {
+                    bottomNavigation.visibility = View.VISIBLE
+                }
+                insets
+            }
 
             return mainView
         }

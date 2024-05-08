@@ -40,7 +40,7 @@ import com.ichi2.anki.DispatchKeyEventListener
 import com.ichi2.anki.Flag
 import com.ichi2.anki.R
 import com.ichi2.anki.browser.PreviewerIdsFile
-import com.ichi2.anki.cardviewer.SoundPlayer
+import com.ichi2.anki.cardviewer.CardMediaPlayer
 import com.ichi2.anki.snackbar.BaseSnackbarBuilderProvider
 import com.ichi2.anki.snackbar.SnackbarBuilder
 import com.ichi2.anki.utils.ext.sharedPrefs
@@ -62,7 +62,7 @@ class PreviewerFragment :
             "$CARD_IDS_FILE_ARG is required"
         } as PreviewerIdsFile
         val currentIndex = requireArguments().getInt(CURRENT_INDEX_ARG, 0)
-        PreviewerViewModel.factory(previewerIdsFile, currentIndex, SoundPlayer())
+        PreviewerViewModel.factory(previewerIdsFile, currentIndex, CardMediaPlayer())
     }
     override val webView: WebView
         get() = requireView().findViewById(R.id.webview)
@@ -229,6 +229,27 @@ class PreviewerFragment :
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_DOWN) return false
+
+        if (event.isCtrlPressed) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_1 -> viewModel.toggleFlag(Flag.RED)
+                KeyEvent.KEYCODE_2 -> viewModel.toggleFlag(Flag.ORANGE)
+                KeyEvent.KEYCODE_3 -> viewModel.toggleFlag(Flag.GREEN)
+                KeyEvent.KEYCODE_4 -> viewModel.toggleFlag(Flag.BLUE)
+                KeyEvent.KEYCODE_5 -> viewModel.toggleFlag(Flag.PINK)
+                KeyEvent.KEYCODE_6 -> viewModel.toggleFlag(Flag.TURQUOISE)
+                KeyEvent.KEYCODE_7 -> viewModel.toggleFlag(Flag.PURPLE)
+                else -> return false
+            }
+            return true
+        }
+
+        when (event.unicodeChar.toChar()) {
+            '*' -> {
+                viewModel.toggleMark()
+                return true
+            }
+        }
 
         when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT -> {

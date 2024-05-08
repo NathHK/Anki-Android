@@ -18,12 +18,13 @@ package com.ichi2.anki.dialogs
 
 import android.app.Activity
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.snackbar.Snackbar
-import com.ichi2.anki.CollectionHelper
+import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.R
-import com.ichi2.anki.UIUtils.showThemedToast
+import com.ichi2.anki.showThemedToast
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.annotations.NeedsTest
 import com.ichi2.libanki.Collection
@@ -64,7 +65,7 @@ class CreateDeckDialog(
     }
 
     private val getColUnsafe
-        get() = CollectionHelper.instance.getColUnsafe(context)!!
+        get() = CollectionManager.getColUnsafe()
 
     suspend fun showFilteredDeckDialog() {
         Timber.i("CreateDeckDialog::showFilteredDeckDialog")
@@ -96,13 +97,21 @@ class CreateDeckDialog(
                 dialog.positiveButton.isEnabled = false
                 return@input
             }
-            if (deckExists(getColUnsafe, maybeDeckName)) {
+            if (maybeDeckName != initialDeckName && deckExists(getColUnsafe, maybeDeckName)) {
                 dialog.getInputTextLayout().error = context.getString(R.string.deck_already_exists)
                 dialog.positiveButton.isEnabled = false
                 return@input
             }
             dialog.getInputTextLayout().error = null
             dialog.positiveButton.isEnabled = true
+
+            // Users expect the ordering [1, 2, 10], but get [1, 10, 2]
+            // To fix: they need [01, 02, 10]. Show a hint to help them
+            dialog.getInputTextLayout().helperText = if (text.containsNumberLargerThanNine()) {
+                context.getString(R.string.create_deck_numeric_hint)
+            } else {
+                null
+            }
         }
         shownDialog = dialog
         return dialog
@@ -221,3 +230,9 @@ class CreateDeckDialog(
         }
     }
 }
+
+// to not match times. Example: "12:34:56"
+// we use (?:[^:]|^) to ensure ":56" doesn't match
+// we use (?:[^:]|$) to ensure "12:" doesn't match
+@VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+fun CharSequence.containsNumberLargerThanNine(): Boolean = Regex("""(?:[^:]|^)[1-9]\d+(?:[^:]|$)""").find(this) != null

@@ -59,7 +59,6 @@
     <!-- DeckPicker.kt -->
     <string name="expand">Ανάπτυξη</string>
     <string name="collapse">Σύμπτυξη</string>
-    <string name="study_more">Study more</string>
     <plurals name="reviewer_window_title">
         <item quantity="one">%d minute left</item>
         <item quantity="other">%d minutes left</item>
@@ -135,12 +134,10 @@
     <string name="empty_filtered_deck">Άδειασμα φιλτραρισμένης τράπουλας&#8230;</string>
     <string name="custom_study_deck_name">Προσαρμοσμένη μελέτη λειτουργίας</string>
     <string name="custom_study_deck_exists">Παρακαλούμε μετονομάστε την υπάρχουσα τράπουλα Προσαρμοσμένης Μελέτης πρώτα.</string>
-    <string name="empty_deck">Αυτή η τράπουλα είναι κενή</string>
     <string name="search_deck" comment="Deck search for selecting it">Αναζήτηση</string>
+    <string name="empty_deck">Αυτή η τράπουλα είναι κενή</string>
     <string name="search_for_download_deck" comment="Deck search value for downloading deck">Αναζήτηση</string>
     <string name="invalid_deck_name">Μη έγκυρο όνομα</string>
-    <string name="studyoptions_limit_reached">Daily study limit reached</string>
-    <string name="studyoptions_empty_schedule">No cards scheduled to study</string>
     <string name="studyoptions_congrats_finished">Congratulations! You have finished for now.</string>
     <string name="studyoptions_no_cards_due">Δεν υπάρχουν ακόμη κάρτες για επανάληψη</string>
     <string name="sd_card_not_mounted">O χώρος αποθήκευσης συσκευής δεν έχει προσαρτηθεί</string>
@@ -202,7 +199,7 @@
     <string name="error__etc__multiple_consecutive_errors_without_progress_most_recent" comment="Generic message for an error that has multiple causes that happened in sequence, e.g.,         “Multiple consecutive errors without progress, most recent: CPU hit by a cosmic ray particle”.">Πολλαπλά διαδοχικά σφάλματα χωρίς πρόοδο, πιο πρόσφατα: %s</string>
     <!-- Scoped storage migration -->
     <string name="migration__migrating_database_files" comment="Notification title that is shown when copying essential database files.         As this is shown on the same line as the notification message, prefer shorter text.">Μετεγκατάσταση αρχείων βάσης δεδομένων</string>
-    <string name="migration__copying" comment="Notification message that is shown when copying essential database files.         As this is shown on the same line as the notification title, prefer shorter text.">Αντιγραφή...</string>
+    <string name="migration__copying" comment="Notification message that is shown when copying essential database files.         As this is shown on the same line as the notification title, prefer shorter text.">Αντιγραφή&#8230;</string>
     <string name="migration__migrating_media" comment="Notification title that is shown when migrating media files.         As this is shown on the same line as the notification message, prefer shorter text.">Μετεγκατάσταση πολυμέσων</string>
     <string name="migration__calculating_transfer_size" comment="Notification message that is shown when calculating the total size of media files to move.         As this is shown on the same line as the notification title, prefer shorter text.">Υπολογισμός μεγέθους μεταφοράς&#8230;</string>
     <string name="migration__moved_x_of_y" comment="Notification message that is shown when moving media files.         As this is shown on the same line as the notification title, prefer shorter text.         The placeholders will be replaced with short localized byte amounts,         e.g. Moved 10 kB of 5.2 MB">Μετακινήθηκαν %1$s από %2$s</string>
@@ -254,4 +251,5 @@
     <string name="storage_access_summary">Αποθηκεύει τη συλλογή σας σε ασφαλές μέρος που δεν θα διαγραφεί αν η εφαρμογή απεγκατασταθεί</string>
     <string name="all_files_access_title" comment="Name of the “All files access” permission from Android 10 and after">Πρόσβαση σε όλα τα αρχεία</string>
     <string name="image_occlusion">Image Occlusion</string>
+    <string name="remove_account" comment="open a website to start the deletion of an AnkiWeb account">Remove account</string>
 </resources>

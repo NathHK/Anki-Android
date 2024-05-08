@@ -165,8 +165,8 @@
     <string name="vertical_centering_summ">कार्डेची सामग्री अनुलंब मध्यभागी ठेवा</string>
     <string name="pref_double_tap_time_interval" maxLength="41">Double tap time interval (milliseconds)</string>
     <string name="pref_double_tap_time_interval_summary">A second tap of the answer buttons will be ignored if this time has not elapsed. This prevents accidental double taps</string>
-    <string name="pref_show_answer_long_press" maxLength="41">Show answer long-press time (ms)</string>
-    <string name="pref_show_answer_long_press_summary">Minimum long-press time before the show answer button will register a touch. May reduce the chance of accidental extra button presses. Default is 0ms</string>
+    <string name="pref_show_answer_long_press_time" maxLength="41">Show answer long-press time</string>
+    <string name="pref_show_answer_long_press_time_summary">Minimum pressing time before the show answer button registers a touch.</string>
     <string name="show_estimates" maxLength="41">बटण वेळ दर्शवा</string>
     <string name="show_estimates_summ">उत्तर बटणावर पुढील पुनरावलोकन वेळ दर्शवा</string>
     <string name="show_large_answer_buttons" maxLength="41">Show large answer buttons</string>
@@ -180,7 +180,6 @@
     <string name="use_current" maxLength="41">नवीन कार्डांसाठी डेक</string>
     <string name="learn_cutoff" maxLength="41">पुढे मर्यादा जाणून घ्या</string>
     <string name="time_limit" maxLength="41">टाइमबॉक्स वेळ मर्यादा</string>
-    <string name="new_timezone" maxLength="41">नवीन टाईमझोन हाताळणी</string>
     <string name="day_offset_with_description" maxLength="41">पुढील दिवसाची सुरुवात (0 मध्यरात्री आहे, 23 11PM आहेत)</string>
     <plurals name="day_offset_summ" comment="%d is going to be replaced with the number of hours past midnight. It can be replaced if something else suits better the translation">
         <item quantity="one">%d hour past midnight</item>

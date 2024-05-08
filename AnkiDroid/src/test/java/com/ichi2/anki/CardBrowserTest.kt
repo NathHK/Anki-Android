@@ -22,7 +22,6 @@ import android.text.TextUtils
 import android.view.View
 import android.widget.ListView
 import android.widget.Spinner
-import androidx.annotation.StringRes
 import androidx.core.app.ActivityCompat
 import androidx.core.content.edit
 import androidx.fragment.app.Fragment
@@ -30,13 +29,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.CardBrowser.CardCache
 import com.ichi2.anki.CardBrowser.Companion.dueString
 import com.ichi2.anki.CardBrowser.Companion.nextDue
-import com.ichi2.anki.DeckSpinnerSelection.Companion.ALL_DECKS_ID
 import com.ichi2.anki.IntentHandler.Companion.grantedStoragePermissions
 import com.ichi2.anki.browser.CardBrowserColumn
+import com.ichi2.anki.browser.CardBrowserViewModel
 import com.ichi2.anki.browser.CardBrowserViewModel.Companion.DISPLAY_COLUMN_1_KEY
 import com.ichi2.anki.browser.CardBrowserViewModel.Companion.DISPLAY_COLUMN_2_KEY
 import com.ichi2.anki.model.CardsOrNotes.*
 import com.ichi2.anki.model.SortType
+import com.ichi2.anki.scheduling.ForgetCardsViewModel
 import com.ichi2.anki.servicelayer.NoteService
 import com.ichi2.libanki.CardId
 import com.ichi2.libanki.Consts
@@ -48,15 +48,22 @@ import com.ichi2.testutils.AnkiAssert.assertDoesNotThrowSuspend
 import com.ichi2.testutils.Flaky
 import com.ichi2.testutils.IntentAssert
 import com.ichi2.testutils.OS
+import com.ichi2.testutils.TestClass
 import com.ichi2.testutils.getSharedPrefs
 import com.ichi2.ui.FixedTextView
 import com.ichi2.utils.AdaptionUtil
+import com.ichi2.utils.LanguageUtil
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.*
+import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.greaterThan
+import org.hamcrest.Matchers.hasItem
+import org.hamcrest.Matchers.hasSize
+import org.hamcrest.Matchers.not
+import org.hamcrest.Matchers.nullValue
 import org.junit.Assert
 import org.junit.Ignore
 import org.junit.Test
@@ -66,7 +73,6 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import timber.log.Timber
 import java.util.Calendar
-import java.util.Locale
 import java.util.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -272,6 +278,8 @@ class CardBrowserTest : RobolectricTest() {
 
     @Test
     fun `change deck does not work for dynamic decks`() = runTest {
+        throwOnShowError = false
+
         val dynId = addDynamicDeck("World")
         selectDefaultDeck()
         val b = getBrowserWithNotes(5)
@@ -284,28 +292,6 @@ class CardBrowserTest : RobolectricTest() {
         for (cardId in cardIds) {
             assertThat("Deck should not be changed", col.getCard(cardId).did, not(dynId))
         }
-    }
-
-    @Test
-    fun `change deck in notes mode 15444`() = runTest {
-        val newDeck = addDeck("World")
-        selectDefaultDeck()
-        val b = getBrowserWithNotes(5, reversed = true)
-        b.viewModel.setCardsOrNotes(NOTES)
-
-        b.selectRowsWithPositions(0, 2)
-
-        val allCardIds = b.viewModel.queryAllSelectedCardIds()
-        assertThat(allCardIds.size, equalTo(4))
-
-        b.moveSelectedCardsToDeck(newDeck).join()
-
-        for (cardId in allCardIds) {
-            assertThat("Deck should be changed", col.getCard(cardId).did, equalTo(newDeck))
-        }
-
-        val hasSomeDecksUnchanged = b.viewModel.cards.any { row -> row.card.did != newDeck }
-        assertThat("some decks are unchanged", hasSomeDecksUnchanged)
     }
 
     @Test // see #13391
@@ -413,26 +399,9 @@ class CardBrowserTest : RobolectricTest() {
         n.flush()
 
         val b = browserWithNoNewCards
-        b.filterByTag("sketchy::(1)")
+        b.filterByTagSync("sketchy::(1)")
 
         assertThat("tagged card should be returned", b.viewModel.rowCount, equalTo(1))
-    }
-
-    @Test
-    fun filterByFlagDisplaysProperly() = runTest {
-        val cardWithRedFlag = addNoteUsingBasicModel("Card with red flag", "Reverse")
-        flagCardForNote(cardWithRedFlag, Flag.RED)
-
-        val cardWithGreenFlag = addNoteUsingBasicModel("Card with green flag", "Reverse")
-        flagCardForNote(cardWithGreenFlag, Flag.GREEN)
-
-        val anotherCardWithRedFlag = addNoteUsingBasicModel("Second card with red flag", "Reverse")
-        flagCardForNote(anotherCardWithRedFlag, Flag.RED)
-
-        val b = browserWithNoNewCards
-        b.viewModel.setFlagFilter(Flag.RED)
-
-        assertThat("Flagged cards should be returned", b.viewModel.rowCount, equalTo(2))
     }
 
     @Test
@@ -470,24 +439,6 @@ class CardBrowserTest : RobolectricTest() {
             intentAfterReverse.previewerIdsFile.getCardIds(),
             equalTo(listOf(cid2, cid1))
         )
-    }
-
-    /** 7420  */
-    @Test
-    fun addCardDeckIsNotSetIfAllDecksSelectedAfterLoad() = runTest {
-        addDeck("NotDefault")
-
-        val b = browserWithNoNewCards
-
-        assertThat("All decks should not be selected", b.hasSelectedAllDecks(), equalTo(false))
-
-        b.viewModel.setDeckId(ALL_DECKS_ID)
-
-        assertThat("All decks should be selected", b.hasSelectedAllDecks(), equalTo(true))
-
-        val addIntent = b.addNoteIntent
-
-        IntentAssert.doesNotHaveExtra(addIntent, NoteEditor.EXTRA_DID)
     }
 
     /** 7420  */
@@ -553,15 +504,19 @@ class CardBrowserTest : RobolectricTest() {
 
     @Test
     @Config(qualifiers = "en")
+    @SuppressLint("DirectCalendarInstanceUsage")
     fun resetDataTest() = runTest {
+        TimeManager.reset()
         addNoteUsingBasicModel("Hello", "World").firstCard().update {
             due = 5
             queue = Consts.QUEUE_TYPE_REV
             type = Consts.CARD_TYPE_REV
         }
+        val cal = Calendar.getInstance()
+        cal.add(Calendar.DATE, 5)
+        val expectedDate = LanguageUtil.getShortDateFormatFromMs(cal.timeInMillis)
 
         val b = browserWithNoNewCards
-
         b.selectRowsWithPositions(0)
 
         val card = getCheckedCard(b)
@@ -569,10 +524,13 @@ class CardBrowserTest : RobolectricTest() {
         assertThat(
             "Initial due of checked card",
             card.getColumnHeaderText(CardBrowserColumn.DUE),
-            equalTo("8/12/20")
+            equalTo(expectedDate)
         )
 
-        b.resetProgressNoConfirm(listOf(card.id))
+        ForgetCardsViewModel().apply {
+            init(listOf(card.id))
+            resetCardsAsync().await()
+        }
 
         card.reload()
 
@@ -581,29 +539,6 @@ class CardBrowserTest : RobolectricTest() {
             card.getColumnHeaderText(CardBrowserColumn.DUE),
             equalTo("2")
         )
-    }
-
-    @Test
-    @Config(qualifiers = "en")
-    fun rescheduleDataTest() = runTest {
-        TimeManager.reset()
-        val b = getBrowserWithNotes(1)
-
-        b.selectRowsWithPositions(0)
-
-        val card = getCheckedCard(b)
-
-        assertThat(
-            "Initial position of checked card",
-            card.getColumnHeaderText(CardBrowserColumn.DUE),
-            equalTo("1")
-        )
-
-        b.rescheduleWithoutValidation(listOf(card.id), 5)
-
-        card.reload()
-
-        assertThat(card.card.due, equalTo(5))
     }
 
     @Test
@@ -639,20 +574,6 @@ class CardBrowserTest : RobolectricTest() {
     }
 
     @Test
-    @Ignore("FLAKY: Robolectric getOptionsMenu does not require invalidateOptionsMenu - so would not fail")
-    fun rescheduleUndoTest() {
-        val b = getBrowserWithNotes(1)
-
-        assertUndoDoesNotContain(b, R.string.deck_conf_cram_reschedule)
-
-        b.selectRowsWithPositions(0)
-
-        b.rescheduleWithoutValidation(listOf(getCheckedCard(b).id), 2)
-
-        assertUndoContains(b, R.string.deck_conf_cram_reschedule)
-    }
-
-    @Test
     fun change_deck_dialog_is_dismissed_on_activity_recreation() {
         val cardBrowser = browserWithNoNewCards
 
@@ -677,7 +598,7 @@ class CardBrowserTest : RobolectricTest() {
         }
 
         val cardBrowser = browserWithNoNewCards
-        cardBrowser.searchCards("world or hello")
+        cardBrowser.searchCardsSync("world or hello")
 
         assertThat(
             "Cardbrowser has Deck 1 as selected deck",
@@ -747,7 +668,8 @@ class CardBrowserTest : RobolectricTest() {
         }
 
         val cardBrowser = browserWithNoNewCards
-        cardBrowser.searchCards("Hello")
+        cardBrowser.searchCards("Hello").join()
+        waitForAsyncTasksToComplete()
         assertThat(
             "Card browser should have Test Deck as the selected deck",
             cardBrowser.selectedDeckNameForUi,
@@ -755,7 +677,8 @@ class CardBrowserTest : RobolectricTest() {
         )
         assertThat("Result should be empty", cardBrowser.viewModel.rowCount, equalTo(0))
 
-        cardBrowser.searchAllDecks()
+        cardBrowser.searchAllDecks().join()
+        waitForAsyncTasksToComplete()
         assertThat("Result should contain one card", cardBrowser.viewModel.rowCount, equalTo(1))
     }
 
@@ -766,10 +689,12 @@ class CardBrowserTest : RobolectricTest() {
         addNoteUsingBasicAndReversedModel("Hello", "Anki")
 
         browserWithNoNewCards.apply {
-            searchAllDecks()
+            searchAllDecks().join()
+            waitForAsyncTasksToComplete()
             with(viewModel) {
                 assertThat("Result should contain 4 cards", rowCount, equalTo(4))
-                setCardsOrNotes(NOTES)
+                setCardsOrNotes(NOTES).join()
+                waitForAsyncTasksToComplete()
                 assertThat("Result should contain 2 cards (one per note)", rowCount, equalTo(2))
             }
         }
@@ -798,37 +723,10 @@ class CardBrowserTest : RobolectricTest() {
         }
     }
 
-    private fun assertUndoDoesNotContain(browser: CardBrowser, @StringRes resId: Int) {
-        val shadowActivity = shadowOf(browser)
-        val item = shadowActivity.optionsMenu.findItem(R.id.action_undo)
-        val expected = browser.getString(resId)
-        assertThat(
-            item.title.toString(),
-            not(containsString(expected.lowercase(Locale.getDefault())))
-        )
-    }
-
-    private fun assertUndoContains(browser: CardBrowser, @StringRes resId: Int) {
-        val shadowActivity = shadowOf(browser)
-        val item = shadowActivity.optionsMenu.findItem(R.id.action_undo)
-        val expected = browser.getString(resId)
-        assertThat(item.title.toString(), containsString(expected.lowercase(Locale.getDefault())))
-    }
-
     private fun getCheckedCard(b: CardBrowser): CardCache {
         val ids = b.viewModel.selectedRowIds
         assertThat("only one card expected to be checked", ids, hasSize(1))
         return b.getPropertiesForCardId(ids[0])
-    }
-
-    private fun flagCardForNote(n: Note, flag: Flag) {
-        n.firstCard().update {
-            setUserFlag(flag)
-        }
-    }
-
-    private fun selectDefaultDeck() {
-        col.decks.select(1)
     }
 
     private fun deleteCardAtPosition(browser: CardBrowser, positionToCorrupt: Int) {
@@ -871,8 +769,8 @@ class CardBrowserTest : RobolectricTest() {
     }
 
     private class CardBrowserSizeOne : CardBrowser() {
-        override fun numCardsToRender(): Int {
-            return 1
+        override fun updateNumCardsToRender() {
+            viewModel.numCardsToRender = 1
         }
     }
 
@@ -1071,13 +969,14 @@ class CardBrowserTest : RobolectricTest() {
     @Test
     @Config(qualifiers = "en")
     fun nextDueTest() {
-        // Test runs as the 7th of august 2020, 9h00
+        TimeManager.reset()
         val n = addNoteUsingBasicModel("Front", "Back")
         val c = n.firstCard()
         val decks = col.decks
         val cal = Calendar.getInstance()
-        cal[2021, 2, 19, 7, 42] = 42
+        val expectedDate = LanguageUtil.getShortDateFormatFromMs(cal.timeInMillis)
         val id = (cal.timeInMillis / 1000).toInt()
+        cal.add(Calendar.DATE, 27)
 
         // Not filtered
         c.type = Consts.CARD_TYPE_NEW
@@ -1110,26 +1009,29 @@ class CardBrowserTest : RobolectricTest() {
         Assert.assertEquals("", nextDue(col, c))
         Assert.assertEquals("()", dueString(col, c))
         c.queue = Consts.QUEUE_TYPE_LRN
-        Assert.assertEquals("3/19/21", nextDue(col, c))
-        Assert.assertEquals("3/19/21", dueString(col, c))
+        Assert.assertEquals(expectedDate, nextDue(col, c))
+        Assert.assertEquals(expectedDate, dueString(col, c))
         c.queue = Consts.QUEUE_TYPE_PREVIEW
         Assert.assertEquals("", nextDue(col, c))
         Assert.assertEquals("", dueString(col, c))
         c.type = Consts.CARD_TYPE_REV
+
+        val cal2 = Calendar.getInstance()
+        cal2.add(Calendar.DATE, 20)
+        val expectedDate2 = LanguageUtil.getShortDateFormatFromMs(cal2.timeInMillis)
         c.due = 20
-        //  Since tests run the 7th of august, in 20 days we are the 27th of august 2020
         c.queue = Consts.QUEUE_TYPE_MANUALLY_BURIED
-        Assert.assertEquals("8/27/20", nextDue(col, c))
-        Assert.assertEquals("(8/27/20)", dueString(col, c))
+        Assert.assertEquals(expectedDate2, nextDue(col, c))
+        Assert.assertEquals("($expectedDate2)", dueString(col, c))
         c.queue = Consts.QUEUE_TYPE_SIBLING_BURIED
-        Assert.assertEquals("8/27/20", nextDue(col, c))
-        Assert.assertEquals("(8/27/20)", dueString(col, c))
+        Assert.assertEquals(expectedDate2, nextDue(col, c))
+        Assert.assertEquals("($expectedDate2)", dueString(col, c))
         c.queue = Consts.QUEUE_TYPE_SUSPENDED
-        Assert.assertEquals("8/27/20", nextDue(col, c))
-        Assert.assertEquals("(8/27/20)", dueString(col, c))
+        Assert.assertEquals(expectedDate2, nextDue(col, c))
+        Assert.assertEquals("($expectedDate2)", dueString(col, c))
         c.queue = Consts.QUEUE_TYPE_REV
-        Assert.assertEquals("8/27/20", nextDue(col, c))
-        Assert.assertEquals("8/27/20", dueString(col, c))
+        Assert.assertEquals(expectedDate2, nextDue(col, c))
+        Assert.assertEquals(expectedDate2, dueString(col, c))
         c.queue = Consts.QUEUE_TYPE_PREVIEW
         Assert.assertEquals("", nextDue(col, c))
         Assert.assertEquals("", dueString(col, c))
@@ -1146,8 +1048,8 @@ class CardBrowserTest : RobolectricTest() {
         Assert.assertEquals("()", dueString(col, c))
         c.queue = Consts.QUEUE_TYPE_LRN
         c.due = id
-        Assert.assertEquals("3/19/21", nextDue(col, c))
-        Assert.assertEquals("3/19/21", dueString(col, c))
+        Assert.assertEquals(expectedDate, nextDue(col, c))
+        Assert.assertEquals(expectedDate, dueString(col, c))
         c.queue = Consts.QUEUE_TYPE_PREVIEW
         Assert.assertEquals("", nextDue(col, c))
         Assert.assertEquals("", dueString(col, c))
@@ -1220,3 +1122,23 @@ val CardBrowser.lastDeckId
 
 val CardBrowser.validDecksForChangeDeck
     get() = runBlocking { getValidDecksForChangeDeck() }
+
+suspend fun CardBrowser.searchCardsSync(query: String) {
+    searchCards(query)
+    viewModel.searchJob?.join()
+}
+suspend fun CardBrowser.filterByTagSync(vararg tags: String) {
+    filterByTag(*tags)
+    viewModel.searchJob?.join()
+}
+
+suspend fun CardBrowserViewModel.setFlagFilterSync(flag: Flag) {
+    setFlagFilter(flag)
+    searchJob?.join()
+}
+
+fun TestClass.flagCardForNote(n: Note, flag: Flag) {
+    n.firstCard().update {
+        setUserFlag(flag)
+    }
+}

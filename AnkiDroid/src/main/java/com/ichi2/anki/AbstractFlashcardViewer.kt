@@ -47,7 +47,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.children
-import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle.State.RESUMED
 import anki.collection.OpChanges
 import com.drakeet.drawer.FullDraggableContainer
@@ -55,7 +54,6 @@ import com.google.android.material.snackbar.Snackbar
 import com.ichi2.anim.ActivityTransitionAnimation
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
-import com.ichi2.anki.UIUtils.showThemedToast
 import com.ichi2.anki.cardviewer.*
 import com.ichi2.anki.cardviewer.AndroidCardRenderContext.Companion.createInstance
 import com.ichi2.anki.cardviewer.TypeAnswer.Companion.createInstance
@@ -67,7 +65,6 @@ import com.ichi2.anki.model.CardStateFilter
 import com.ichi2.anki.noteeditor.EditCardDestination
 import com.ichi2.anki.noteeditor.toIntent
 import com.ichi2.anki.pages.AnkiServer
-import com.ichi2.anki.pages.AnkiServer.Companion.LOCALHOST
 import com.ichi2.anki.pages.CongratsPage
 import com.ichi2.anki.pages.PostRequestHandler
 import com.ichi2.anki.preferences.sharedPrefs
@@ -177,7 +174,7 @@ abstract class AbstractFlashcardViewer :
         private set
 
     /** Accessor for [WebView.getWebViewClient] before API 26 */
-    private var webViewClient: CardViewerWebClient? = null
+    var webViewClient: CardViewerWebClient? = null
 
     private var cardFrame: FrameLayout? = null
     private var touchLayer: FrameLayout? = null
@@ -234,15 +231,14 @@ abstract class AbstractFlashcardViewer :
     @get:VisibleForTesting
     var cardContent: String? = null
         private set
-    private val baseUrl get() = server.baseUrl()
-    private val webviewDomain
-        get() = "$LOCALHOST:${server.listeningPort}"
+    private val baseUrl
+        get() = getMediaBaseUrl(CollectionHelper.getMediaDirectory(this).path)
 
     private var viewerUrl: String? = null
     private val fadeDuration = 300
 
     @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
-    internal lateinit var soundPlayer: SoundPlayer
+    internal lateinit var cardMediaPlayer: CardMediaPlayer
 
     /** Reference to the parent of the cardFrame to allow regeneration of the cardFrame in case of crash  */
     private var cardFrameParent: ViewGroup? = null
@@ -283,7 +279,8 @@ abstract class AbstractFlashcardViewer :
      * @see opExecuted
      * @see refreshIfRequired
      */
-    private var refreshRequired: ViewerRefresh? = null
+    @VisibleForTesting
+    internal var refreshRequired: ViewerRefresh? = null
 
     private val editCurrentCardLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -532,7 +529,7 @@ abstract class AbstractFlashcardViewer :
     public override fun onCollectionLoaded(col: Collection) {
         super.onCollectionLoaded(col)
         val mediaDir = col.media.dir
-        soundPlayer = SoundPlayer.newInstance(this, getMediaBaseUrl(mediaDir))
+        cardMediaPlayer = CardMediaPlayer.newInstance(this, getMediaBaseUrl(mediaDir))
         registerExternalStorageListener()
         restoreCollectionPreferences(col)
         initLayout()
@@ -549,8 +546,8 @@ abstract class AbstractFlashcardViewer :
         super.onPause()
         automaticAnswer.disable()
         gestureDetectorImpl.stopShakeDetector()
-        if (this::soundPlayer.isInitialized) {
-            soundPlayer.isEnabled = false
+        if (this::cardMediaPlayer.isInitialized) {
+            cardMediaPlayer.isEnabled = false
         }
         longClickHandler.removeCallbacks(startLongClickAction)
         // Prevent loss of data in Cookies
@@ -561,8 +558,8 @@ abstract class AbstractFlashcardViewer :
         super.onResume()
         automaticAnswer.enable()
         gestureDetectorImpl.startShakeDetector()
-        if (this::soundPlayer.isInitialized) {
-            soundPlayer.isEnabled = true
+        if (this::cardMediaPlayer.isInitialized) {
+            cardMediaPlayer.isEnabled = true
         }
         // Reset the activity title
         updateActionBar()
@@ -576,8 +573,8 @@ abstract class AbstractFlashcardViewer :
      *
      * If the activity is NOT [RESUMED], wait until [onResume]
      */
-    @NeedsTest("if opExecuted is called while activity is in the background, audio plays onResume")
-    private fun refreshIfRequired(isResuming: Boolean = false) {
+    @VisibleForTesting
+    internal fun refreshIfRequired(isResuming: Boolean = false) {
         // Defer the execution of `opExecuted` until the user is looking at the screen.
         // This ensures that audio/timers are not accidentally started
         if (isResuming || lifecycle.currentState.isAtLeast(RESUMED)) {
@@ -605,14 +602,15 @@ abstract class AbstractFlashcardViewer :
             cardFrame!!.removeAllViews()
         }
         destroyWebView(webView) // OK to do without a lock
-        if (this::soundPlayer.isInitialized) {
-            soundPlayer.close()
+        if (this::cardMediaPlayer.isInitialized) {
+            cardMediaPlayer.close()
         }
     }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (isDrawerOpen) {
+            @Suppress("DEPRECATION")
             super.onBackPressed()
         } else {
             Timber.i("Back key pressed")
@@ -801,7 +799,7 @@ abstract class AbstractFlashcardViewer :
                     "AbstractFlashcardViewer:: OK button pressed to delete note %d",
                     currentCard!!.nid
                 )
-                launchCatchingTask { soundPlayer.stopSounds() }
+                launchCatchingTask { cardMediaPlayer.stopSounds() }
                 deleteNoteWithoutConfirmation()
             }
             negativeButton(R.string.dialog_cancel)
@@ -840,7 +838,7 @@ abstract class AbstractFlashcardViewer :
             }
             // Temporarily sets the answer indicator dots appearing below the toolbar
             previousAnswerIndicator?.displayAnswerIndicator(ease)
-            soundPlayer.stopSounds()
+            cardMediaPlayer.stopSounds()
             currentEase = ease
 
             answerCardInner(ease)
@@ -995,7 +993,6 @@ abstract class AbstractFlashcardViewer :
     }
 
     protected open fun createWebView(): WebView {
-        val resourceHandler = ViewerResourceHandler(this, webviewDomain)
         val webView: WebView = MyWebView(this).apply {
             scrollBarStyle = View.SCROLLBARS_OUTSIDE_OVERLAY
             with(settings) {
@@ -1013,7 +1010,7 @@ abstract class AbstractFlashcardViewer :
             isScrollbarFadingEnabled = true
             // Set transparent color to prevent flashing white when night mode enabled
             setBackgroundColor(Color.argb(1, 0, 0, 0))
-            CardViewerWebClient(resourceHandler, this@AbstractFlashcardViewer).apply {
+            CardViewerWebClient(this@AbstractFlashcardViewer).apply {
                 webViewClient = this
                 this@AbstractFlashcardViewer.webViewClient = this
             }
@@ -1401,7 +1398,7 @@ abstract class AbstractFlashcardViewer :
         Timber.d("updateCard()")
         // TODO: This doesn't need to be blocking
         runBlocking {
-            soundPlayer.loadCardSounds(currentCard!!)
+            cardMediaPlayer.loadCardSounds(currentCard!!)
         }
         cardContent = content.html
         fillFlashcard()
@@ -1421,22 +1418,22 @@ abstract class AbstractFlashcardViewer :
             Timber.w("sounds are not played as the activity is inactive")
             return
         }
-        if (!soundPlayer.config.autoplay && !doAudioReplay) return
+        if (!cardMediaPlayer.config.autoplay && !doAudioReplay) return
         // Use TTS if TTS preference enabled and no other sound source
-        val useTTS = tts.enabled && !soundPlayer.hasSounds(displayAnswer)
+        val useTTS = tts.enabled && !cardMediaPlayer.hasSounds(displayAnswer)
         // We need to play the sounds from the proper side of the card
         if (!useTTS) {
             launchCatchingTask {
                 val side = if (displayAnswer) SingleCardSide.BACK else SingleCardSide.FRONT
                 when (doAudioReplay) {
-                    true -> soundPlayer.replayAllSounds(side)
-                    false -> soundPlayer.playAllSounds(side)
+                    true -> cardMediaPlayer.replayAllSounds(side)
+                    false -> cardMediaPlayer.playAllSounds(side)
                 }
             }
             return
         }
 
-        val replayQuestion = soundPlayer.config.replayQuestion
+        val replayQuestion = cardMediaPlayer.config.replayQuestion
         // Text to speech is in effect here
         // If the question is displayed or if the question should be replayed, read the question
         if (ttsInitialized) {
@@ -1458,7 +1455,7 @@ abstract class AbstractFlashcardViewer :
     }
 
     /**
-     * @see SoundPlayer.onSoundGroupCompleted
+     * @see CardMediaPlayer.onSoundGroupCompleted
      */
     open fun onSoundGroupCompleted() {
         Timber.v("onSoundGroupCompleted")
@@ -1502,7 +1499,7 @@ abstract class AbstractFlashcardViewer :
 
     private fun loadContentIntoCard(card: WebView?, content: String) {
         if (card != null) {
-            card.settings.mediaPlaybackRequiresUserGesture = !soundPlayer.config.autoplay
+            card.settings.mediaPlaybackRequiresUserGesture = !cardMediaPlayer.config.autoplay
             card.loadDataWithBaseURL(
                 baseUrl,
                 content,
@@ -1535,7 +1532,7 @@ abstract class AbstractFlashcardViewer :
                     sched.buryCards(listOf(currentCard!!.id))
                 }
             }
-            soundPlayer.stopSounds()
+            cardMediaPlayer.stopSounds()
             showSnackbar(R.string.card_buried, Reviewer.ACTION_SNACKBAR_TIME)
         }
         return true
@@ -1549,7 +1546,7 @@ abstract class AbstractFlashcardViewer :
                     sched.suspendCards(listOf(currentCard!!.id))
                 }
             }
-            soundPlayer.stopSounds()
+            cardMediaPlayer.stopSounds()
             showSnackbar(TR.studyingCardSuspended(), Reviewer.ACTION_SNACKBAR_TIME)
         }
         return true
@@ -1565,7 +1562,7 @@ abstract class AbstractFlashcardViewer :
             }
             val count = changed.count
             val noteSuspended = resources.getQuantityString(R.plurals.note_suspended, count, count)
-            soundPlayer.stopSounds()
+            cardMediaPlayer.stopSounds()
             showSnackbar(noteSuspended, Reviewer.ACTION_SNACKBAR_TIME)
         }
         return true
@@ -1579,7 +1576,7 @@ abstract class AbstractFlashcardViewer :
                     sched.buryNotes(listOf(currentCard!!.nid))
                 }
             }
-            soundPlayer.stopSounds()
+            cardMediaPlayer.stopSounds()
             showSnackbar(TR.studyingCardsBuried(changed.count), Reviewer.ACTION_SNACKBAR_TIME)
         }
         return true
@@ -1746,9 +1743,7 @@ abstract class AbstractFlashcardViewer :
     override val baseSnackbarBuilder: SnackbarBuilder = {
         // Configure the snackbar to avoid the bottom answer buttons
         if (answerButtonsPosition == "bottom") {
-            val easeButtons = findViewById<View>(R.id.answer_options_layout)
-            val previewButtons = findViewById<View>(R.id.preview_buttons_layout)
-            anchorView = if (previewButtons.isVisible) previewButtons else easeButtons
+            anchorView = findViewById<View>(R.id.answer_options_layout)
         }
     }
 
@@ -2237,10 +2232,9 @@ abstract class AbstractFlashcardViewer :
         }
     }
 
-    protected inner class CardViewerWebClient internal constructor(
-        private val loader: ViewerResourceHandler?,
+    inner class CardViewerWebClient internal constructor(
         private val onPageFinishedCallback: OnPageFinishedCallback? = null
-    ) : WebViewClient() {
+    ) : WebViewClient(), JavascriptEvaluator {
         private var pageFinishedFired = true
         private val pageRenderStopwatch = Stopwatch.init("page render")
 
@@ -2259,6 +2253,9 @@ abstract class AbstractFlashcardViewer :
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             pageRenderStopwatch.reset()
             pageFinishedFired = false
+            val script = "globalThis.ankidroid = globalThis.ankidroid || {};" +
+                "ankidroid.postBaseUrl = `${server.baseUrl()}`"
+            view?.evaluateJavascript(script, null)
         }
 
         override fun shouldInterceptRequest(
@@ -2266,7 +2263,6 @@ abstract class AbstractFlashcardViewer :
             request: WebResourceRequest
         ): WebResourceResponse? {
             val url = request.url
-            loader!!.shouldInterceptRequest(request)?.let { return it }
             if (url.toString().startsWith("file://")) {
                 url.path?.let { path -> migrationService?.migrateFileImmediately(File(path)) }
             }
@@ -2307,6 +2303,16 @@ abstract class AbstractFlashcardViewer :
                 launchCatchingTask {
                     controlSound(url)
                 }
+                return true
+            }
+            if (url.startsWith("videoended:")) {
+                // note: 'q:0' is provided
+                cardMediaPlayer.onVideoFinished()
+                return true
+            }
+            if (url.startsWith("videopause:")) {
+                // note: 'q:0' is provided
+                cardMediaPlayer.onVideoPaused()
                 return true
             }
             if (url.startsWith("state-mutation-error:")) {
@@ -2458,7 +2464,7 @@ abstract class AbstractFlashcardViewer :
                 // not currently supported
                 else -> return
             }
-            soundPlayer.playOneSound(avTag)
+            cardMediaPlayer.playOneSound(avTag)
         }
 
         // Run any post-load events in javascript that rely on the window being completely loaded.
@@ -2482,6 +2488,12 @@ abstract class AbstractFlashcardViewer :
         @TargetApi(Build.VERSION_CODES.O)
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
             return onRenderProcessGoneDelegate.onRenderProcessGone(view, detail)
+        }
+
+        override fun eval(js: String) {
+            // WARNING: it is not guaranteed that card.js has loaded at this point
+            // even if `evaluateAfterDOMContentLoaded` is called
+            runOnUiThread { webView!!.evaluateJavascript(js, null) }
         }
     }
 
@@ -2528,8 +2540,6 @@ abstract class AbstractFlashcardViewer :
         showDialogFragment(dialog)
     }
 
-    @NeedsTest("14656: adding tags does not flip the card")
-    @NeedsTest("does not hang and can be called twice")
     override fun onSelectedTags(
         selectedTags: List<String>,
         indeterminateTags: List<String>,

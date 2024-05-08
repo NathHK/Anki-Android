@@ -103,7 +103,7 @@ class Notetypes(val col: Collection) {
     }
 
     private fun _get_cached(ntid: int): NotetypeJson? {
-        return _cache.get(ntid)
+        return _cache[ntid]
     }
 
     @NeedsTest("14827: styles are updated after syncing style changes")
@@ -539,7 +539,7 @@ class Notetypes(val col: Collection) {
 
     /** Convert old->new map to list of old indexes/nulls */
     private fun convertLegacyMap(map: Map<Int, Int?>, newSize: Int): Iterable<Int> {
-        val newToOld = map.entries.filter({ it.value != null }).associate { (k, v) -> v to k }
+        val newToOld = map.entries.filter { it.value != null }.associate { (k, v) -> v to k }
         val output = mutableListOf<Int>()
         for (idx in 0 until newSize) {
             output.append(newToOld[idx] ?: -1)

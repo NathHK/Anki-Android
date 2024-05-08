@@ -31,10 +31,10 @@ import androidx.fragment.app.commit
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
-import com.ichi2.anki.UIUtils
 import com.ichi2.anki.analytics.UsageAnalytics
 import com.ichi2.anki.analytics.UsageAnalytics.Actions
 import com.ichi2.anki.analytics.UsageAnalytics.Category
+import com.ichi2.anki.convertDpToPixel
 import com.ichi2.anki.dialogs.help.HelpItem.Action.OpenUrl
 import com.ichi2.anki.dialogs.help.HelpItem.Action.OpenUrlResource
 import com.ichi2.anki.dialogs.help.HelpItem.Action.Rate
@@ -128,6 +128,18 @@ class HelpDialog : DialogFragment() {
             }
         }
 
+        fun newPrivacyPolicyInstance(): HelpDialog {
+            UsageAnalytics.sendAnalyticsEvent(Category.LINK_CLICKED, Actions.OPENED_PRIVACY)
+            val privacyId = mainHelpMenuItems.single { it.analyticsId == Actions.OPENED_PRIVACY }.id
+            val privacyItems = childHelpMenuItems.filter { it.parentId == privacyId }
+            return HelpDialog().apply {
+                arguments = bundleOf(
+                    ARG_MENU_TITLE to R.string.help_title_privacy,
+                    ARG_MENU_ITEMS to privacyItems.toTypedArray()
+                )
+            }
+        }
+
         /**
          * @param canRateApp a boolean that indicates if the system has an app to open to rate AnkiDroid
          */
@@ -169,7 +181,7 @@ class HelpPageFragment : Fragment(R.layout.fragment_help_page) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val drawablePadding = UIUtils.convertDpToPixel(16F, requireContext()).toInt()
+        val drawablePadding = convertDpToPixel(16F, requireContext()).toInt()
         val pageContentLayout = view.findViewById<LinearLayout>(R.id.page_content)
         requireArgsHelpEntries().forEach { menuItem ->
             val contentRow = requireActivity().layoutInflater.inflate(

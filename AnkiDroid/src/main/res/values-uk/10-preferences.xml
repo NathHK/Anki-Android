@@ -167,8 +167,8 @@
     <string name="vertical_centering_summ">Центрувати вміст карт вертикально</string>
     <string name="pref_double_tap_time_interval" maxLength="41">Інтервал подвійного дотику в мілісекундах</string>
     <string name="pref_double_tap_time_interval_summary">Другий дотик відповіді буде проігнорований, якщо час ще не минув. Це запобігає подвійному натисканню</string>
-    <string name="pref_show_answer_long_press" maxLength="41">Тривалість довгого натискання для показу відповіді (мс)</string>
-    <string name="pref_show_answer_long_press_summary">Мінімальна тривалість натискання для того, аби кнопка відповіді зафіксувала дотик. Може зменшити ймовірність випадкових натискань. За замовчуванням - 0 мс</string>
+    <string name="pref_show_answer_long_press_time" maxLength="41">Show answer long-press time</string>
+    <string name="pref_show_answer_long_press_time_summary">Minimum pressing time before the show answer button registers a touch.</string>
     <string name="show_estimates" maxLength="41">Показувати час кнопки</string>
     <string name="show_estimates_summ">Показувати час наступного повторення над кнопками відповіді</string>
     <string name="show_large_answer_buttons" maxLength="41">Показати великі кнопки відповіді</string>
@@ -182,7 +182,6 @@
     <string name="use_current" maxLength="41">Колода для нових карт</string>
     <string name="learn_cutoff" maxLength="41">Ліміт вивчення карток наперед</string>
     <string name="time_limit" maxLength="41">Період лічильника переглядів</string>
-    <string name="new_timezone" maxLength="41">Обробка нового часового поясу</string>
     <string name="day_offset_with_description" maxLength="41">Початок наступного дня (0 – опівніч, 23 – 23:00)</string>
     <plurals name="day_offset_summ" comment="%d is going to be replaced with the number of hours past midnight. It can be replaced if something else suits better the translation">
         <item quantity="one">%d година після опівночі</item>
@@ -274,7 +273,7 @@
     <string name="binding_add_axis">Додати джойстик/контролер руху</string>
     <string name="axis_picker_move_joystick">Рухайте джойстиком/контролером руху</string>
     <string name="user_actions" maxLength="41">Дії користувача</string>
-    <string name="user_actions_summary" maxLength="41">Trigger JavaScript from the review screen</string>
+    <string name="user_actions_summary" maxLength="41">Запустити JavaScript з екрану повторень</string>
     <string name="user_action_1" maxLength="41">Дія 1</string>
     <string name="user_action_2" maxLength="41">Дія 2</string>
     <string name="user_action_3" maxLength="41">Дія 3</string>

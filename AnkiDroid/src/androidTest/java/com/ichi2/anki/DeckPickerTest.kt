@@ -28,7 +28,7 @@ import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.ichi2.anki.TestUtils.activityInstance
 import com.ichi2.anki.TestUtils.clickChildViewWithId
-import com.ichi2.anki.TestUtils.isScreenSw600dp
+import com.ichi2.anki.TestUtils.isTablet
 import com.ichi2.anki.TestUtils.wasBuiltOnCI
 import com.ichi2.anki.tests.InstrumentedTest
 import com.ichi2.anki.testutil.GrantStoragePermission.storagePermission
@@ -58,7 +58,7 @@ class DeckPickerTest : InstrumentedTest() {
         assumeFalse("Test flaky in CI - #9282, skipping", wasBuiltOnCI())
 
         // For mobile. If it is not a mobile, then test will be ignored.
-        assumeTrue(!isScreenSw600dp)
+        assumeTrue(!isTablet)
         val testString = System.currentTimeMillis().toString() + ""
         createDeckWithCard(testString)
 
@@ -88,7 +88,9 @@ class DeckPickerTest : InstrumentedTest() {
         assumeFalse("Test flaky in CI - #9282, skipping", wasBuiltOnCI())
 
         // For tablet. If it is not a tablet, then test will be ignored.
-        assumeTrue(isScreenSw600dp)
+        assumeTrue(isTablet)
+        closeGetStartedScreenIfExists()
+        closeBackupCollectionDialogIfExists()
         val testString = System.currentTimeMillis().toString() + ""
         createDeckWithCard(testString)
 
@@ -101,8 +103,8 @@ class DeckPickerTest : InstrumentedTest() {
         // Create a new deck
         onView(withId(R.id.fab_main)).perform(click())
         onView(withId(R.id.add_deck_action)).perform(click())
-        onView(withId(R.id.action_edit)).perform(typeText("TestDeck$testString"))
-        onView(withId(com.afollestad.materialdialogs.R.id.md_button_positive)).perform(click())
+        onView(withId(R.id.dialog_text_input)).perform(typeText("TestDeck$testString"))
+        onView(withText(R.string.dialog_ok)).perform(click())
 
         // The deck is currently empty, so if we tap on it, it becomes the selected deck but doesn't enter
         onView(withId(R.id.files)).perform(
@@ -114,7 +116,7 @@ class DeckPickerTest : InstrumentedTest() {
 
         // Create a card belonging to the new deck, using Basic type (guaranteed to exist)
         onView(withId(R.id.fab_main)).perform(click())
-        onView(withId(R.id.add_note_label)).perform(click())
+        onView(withId(R.id.fab_main)).perform(click())
 
         // Close the keyboard, it auto-focuses and obscures enough of the screen
         // on some devices that espresso complains about global visibility being <90%
@@ -127,6 +129,7 @@ class DeckPickerTest : InstrumentedTest() {
         closeSoftKeyboard()
 
         // Go back to Deck Picker
+        pressBack()
         pressBack()
     }
 }

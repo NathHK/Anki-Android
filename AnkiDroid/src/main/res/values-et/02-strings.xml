@@ -168,7 +168,7 @@
     <string name="import_interrupted">Importimine katkes: AnkiDroid suleti</string>
     <string name="export_preparation_in_progress">Preparing export&#8230;</string>
     <string name="export_ready_title">Export ready</string>
-    <string name="export_send_no_handlers">Puudub rakendus apkg käsitsemiseks. Salvestamine...</string>
+    <string name="export_send_no_handlers">Puudub rakendus apkg käsitsemiseks. Salvestamine&#8230;</string>
     <string name="export_save_apkg_successful">Anki paki salvestamine õnnestus</string>
     <string name="export_save_apkg_unsuccessful">Anki paki salvestamine ebaõnnestus</string>
     <string name="export_share_title">Send Anki package using</string>
@@ -313,6 +313,7 @@
     <string name="expand_tag">Expand tag \'%s\'</string>
     <!-- Manage note types -->
     <string name="field_editor_model_not_available">Failed to access collection. Please try again!</string>
+    <string name="cd_manage_notetypes_add">Add a new note type</string>
     <!-- App Intro -->
     <string name="intro_ankidroid_tagline_one">Study less</string>
     <string name="intro_ankidroid_tagline_two">Remember more</string>

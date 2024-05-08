@@ -27,6 +27,9 @@ import anki.card_rendering.EmptyCardsReport
 import anki.collection.OpChanges
 import anki.collection.OpChangesWithCount
 import anki.config.ConfigKey
+import anki.config.Preferences
+import anki.config.copy
+import anki.config.preferences
 import anki.search.SearchNode
 import anki.sync.SyncAuth
 import anki.sync.SyncStatusResponse
@@ -40,7 +43,6 @@ import com.ichi2.libanki.sched.Scheduler
 import com.ichi2.libanki.utils.NotInLibAnki
 import com.ichi2.libanki.utils.TimeManager
 import com.ichi2.utils.KotlinCleanup
-import com.ichi2.utils.VersionUtils
 import net.ankiweb.rsdroid.Backend
 import net.ankiweb.rsdroid.RustCleanup
 import net.ankiweb.rsdroid.exceptions.BackendInvalidInputException
@@ -60,7 +62,6 @@ open class Collection(
      *  The path to the collection.anki2 database. Must be unicode and openable with [File].
      */
     val path: String,
-    private var debugLog: Boolean, // Not in libAnki.
     /**
      * Outside of libanki, you should not access the backend directly for collection operations.
      * Operations that work on a closed collection (eg importing), or do not require a collection
@@ -131,18 +132,14 @@ open class Collection(
     var ls: Long = 0
     // END: SQL table columns
 
-    private var logHnd: PrintWriter? = null
-
     init {
         media = Media(this)
         tags = Tags(this)
         val created = reopen()
-        log(path, VersionUtils.pkgVersionName)
         startReps = 0
         startTime = 0
         _loadScheduler()
         if (created) {
-            sched.useNewTimezoneCode()
             config.set("schedVer", 2)
             // we need to reload the scheduler: this was previously loaded as V1
             _loadScheduler()
@@ -172,12 +169,17 @@ open class Collection(
         val ver = schedVer()
         if (ver == 1) {
             sched = DummyScheduler(this)
-        } else {
+        } else if (ver == 2) {
             if (!backend.getConfigBool(ConfigKey.Bool.SCHED_2021)) {
                 backend.setConfigBool(ConfigKey.Bool.SCHED_2021, true, undoable = false)
             }
             sched = Scheduler(this)
-            config.set("localOffset", sched.currentTimezoneOffset())
+            if (config.get<Int>("creationOffset") == null) {
+                val prefs = getPreferences().copy {
+                    scheduling = scheduling.copy { newTimezone = true }
+                }
+                setPreferences(prefs)
+            }
         }
     }
 
@@ -193,7 +195,6 @@ open class Collection(
                 backend.closeCollection(downgrade)
             }
             dbInternal = null
-            _closeLog()
             Timber.i("Collection closed")
         }
     }
@@ -205,7 +206,6 @@ open class Collection(
             val (db_, created) = Storage.openDB(path, backend, afterFullSync)
             dbInternal = db_
             load()
-            _openLog()
             if (afterFullSync) {
                 _loadScheduler()
             }
@@ -570,62 +570,6 @@ open class Collection(
         return true
     }
 
-    fun log(vararg objects: Any?) {
-        if (!debugLog) return
-
-        val unixTime = TimeManager.time.intTime()
-
-        val outerTraceElement = Thread.currentThread().stackTrace[3]
-        val fileName = outerTraceElement.fileName
-        val methodName = outerTraceElement.methodName
-
-        val objectsString = objects
-            .map { if (it is LongArray) Arrays.toString(it) else it }
-            .joinToString(", ")
-
-        writeLog("[$unixTime] $fileName:$methodName() $objectsString")
-    }
-
-    private fun writeLog(s: String) {
-        logHnd?.let {
-            try {
-                it.println(s)
-            } catch (e: Exception) {
-                Timber.w(e, "Failed to write to collection log")
-            }
-        }
-        Timber.d(s)
-    }
-
-    private fun _openLog() {
-        if (!debugLog) {
-            return
-        }
-        Timber.i("Opening Collection Log")
-        try {
-            val lpath = File(path.replaceFirst("\\.anki2$".toRegex(), ".log"))
-            if (lpath.exists() && lpath.length() > 10 * 1024 * 1024) {
-                val lpath2 = File("$lpath.old")
-                if (lpath2.exists()) {
-                    lpath2.delete()
-                }
-                lpath.renameTo(lpath2)
-            }
-            logHnd = PrintWriter(BufferedWriter(FileWriter(lpath, true)), true)
-        } catch (e: IOException) {
-            // turn off logging if we can't open the log file
-            Timber.e("Failed to open collection.log file - disabling logging")
-            debugLog = false
-        }
-    }
-
-    private fun _closeLog() {
-        if (!debugLog) return
-        Timber.i("Closing Collection Log")
-        logHnd?.close()
-        logHnd = null
-    }
-
     /**
      * Card Flags *****************************************************************************************************
      */
@@ -754,5 +698,13 @@ open class Collection(
     fun defaultsForAdding(currentReviewCard: Card? = null): anki.notes.DeckAndNotetype {
         val homeDeck = currentReviewCard?.currentDeckId()?.did ?: 0L
         return backend.defaultsForAdding(homeDeckOfCurrentReviewCard = homeDeck)
+    }
+
+    fun getPreferences(): Preferences {
+        return backend.getPreferences()
+    }
+
+    fun setPreferences(preferences: Preferences): OpChanges {
+        return backend.setPreferences(preferences)
     }
 }

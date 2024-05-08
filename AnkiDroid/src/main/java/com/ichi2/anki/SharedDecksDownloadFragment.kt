@@ -19,6 +19,7 @@ package com.ichi2.anki
 
 import android.app.DownloadManager
 import android.content.*
+import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -243,12 +244,13 @@ class SharedDecksDownloadFragment : Fragment(R.layout.fragment_shared_decks_down
                         return false
                     }
 
-                    val columnIndex: Int = it.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                    val columnStatusIndex: Int = it.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                    val columnReasonIndex: Int = it.getColumnIndex(DownloadManager.COLUMN_REASON)
 
                     // Return if download was not successful.
-                    if (it.getInt(columnIndex) != DownloadManager.STATUS_SUCCESSFUL) {
+                    if (it.getInt(columnStatusIndex) != DownloadManager.STATUS_SUCCESSFUL) {
                         Timber.i("Download could not be successful, update UI and unregister receiver")
-                        Timber.d("Status code -> ${it.getInt(columnIndex)}")
+                        Timber.d("Status code -> ${it.getIntOrNull(columnStatusIndex)}, reason ${it.getIntOrNull(columnReasonIndex)}")
                         checkDownloadStatusAndUnregisterReceiver(isSuccessful = false)
                         return false
                     }
@@ -286,6 +288,24 @@ class SharedDecksDownloadFragment : Fragment(R.layout.fragment_shared_decks_down
 
             Timber.d("Checking download status and unregistering receiver")
             checkDownloadStatusAndUnregisterReceiver(isSuccessful = true)
+        }
+    }
+
+    /**
+     * Safely retrieves the integer value from the cursor at the specified column index.
+     *
+     * @param columnIndex The index of the column from which to retrieve the integer value.
+     * @return The integer value from the cursor at the specified column index, or null if invalid or undefined.
+     */
+    private fun Cursor?.getIntOrNull(columnIndex: Int): Int? {
+        return try {
+            if (columnIndex != -1) {
+                this?.getInt(columnIndex)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -420,7 +440,7 @@ class SharedDecksDownloadFragment : Fragment(R.layout.fragment_shared_decks_down
         try {
             context?.startActivity(fileIntent)
         } catch (e: ActivityNotFoundException) {
-            context?.let { UIUtils.showThemedToast(it, R.string.something_wrong, false) }
+            context?.let { showThemedToast(it, R.string.something_wrong, false) }
             Timber.w(e)
         }
     }
@@ -436,12 +456,12 @@ class SharedDecksDownloadFragment : Fragment(R.layout.fragment_shared_decks_down
         if (isVisible && !isSuccessful) {
             if (isInvalidDeckFile) {
                 Timber.i("File is not a valid deck, hence return from the download screen")
-                context?.let { UIUtils.showThemedToast(it, R.string.import_log_no_apkg, false) }
+                context?.let { showThemedToast(it, R.string.import_log_no_apkg, false) }
                 // Go back if file is not a deck and cannot be imported
                 activity?.onBackPressed()
             } else {
                 Timber.i("Download failed, update UI and provide option to retry")
-                context?.let { UIUtils.showThemedToast(it, R.string.something_wrong, false) }
+                context?.let { showThemedToast(it, R.string.something_wrong, false) }
                 // Update UI if download could not be successful
                 tryAgainButton.visibility = View.VISIBLE
                 cancelButton.visibility = View.GONE

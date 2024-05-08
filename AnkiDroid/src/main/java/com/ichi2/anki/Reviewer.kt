@@ -46,13 +46,10 @@ import com.google.android.material.color.MaterialColors
 import com.google.android.material.snackbar.Snackbar
 import com.ichi2.anim.ActivityTransitionAnimation.getInverseTransition
 import com.ichi2.anki.CollectionManager.withCol
-import com.ichi2.anki.UIUtils.showThemedToast
 import com.ichi2.anki.Whiteboard.Companion.createInstance
 import com.ichi2.anki.Whiteboard.OnPaintColorChangeListener
 import com.ichi2.anki.cardviewer.Gesture
 import com.ichi2.anki.cardviewer.ViewerCommand
-import com.ichi2.anki.dialogs.ConfirmationDialog
-import com.ichi2.anki.dialogs.RescheduleDialog.Companion.rescheduleSingleCard
 import com.ichi2.anki.pages.AnkiServer.Companion.ANKIDROID_JS_PREFIX
 import com.ichi2.anki.pages.AnkiServer.Companion.ANKI_PREFIX
 import com.ichi2.anki.pages.CardInfo.Companion.toIntent
@@ -63,11 +60,12 @@ import com.ichi2.anki.reviewer.AnswerButtons.Companion.getBackgroundColors
 import com.ichi2.anki.reviewer.AnswerButtons.Companion.getTextColors
 import com.ichi2.anki.reviewer.FullScreenMode.Companion.fromPreference
 import com.ichi2.anki.reviewer.FullScreenMode.Companion.isFullScreenReview
+import com.ichi2.anki.scheduling.ForgetCardsDialog
+import com.ichi2.anki.scheduling.SetDueDateDialog
 import com.ichi2.anki.servicelayer.NoteService.isMarked
 import com.ichi2.anki.servicelayer.NoteService.toggleMark
-import com.ichi2.anki.servicelayer.rescheduleCards
-import com.ichi2.anki.servicelayer.resetCards
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.anki.ui.internationalization.toSentenceCase
 import com.ichi2.anki.utils.remainingTime
 import com.ichi2.annotations.NeedsTest
 import com.ichi2.audio.AudioRecordingController
@@ -76,6 +74,7 @@ import com.ichi2.audio.AudioRecordingController.Companion.isAudioRecordingSaved
 import com.ichi2.audio.AudioRecordingController.Companion.isRecording
 import com.ichi2.audio.AudioRecordingController.Companion.setEditorStatus
 import com.ichi2.audio.AudioRecordingController.Companion.tempAudioPath
+import com.ichi2.audio.AudioRecordingController.RecordingState
 import com.ichi2.libanki.*
 import com.ichi2.libanki.Collection
 import com.ichi2.libanki.sched.Counts
@@ -91,7 +90,6 @@ import com.ichi2.utils.ViewGroupUtils.setRenderWorkaround
 import com.ichi2.widget.WidgetStatus.updateInBackground
 import timber.log.Timber
 import java.io.File
-import java.util.function.Consumer
 
 @Suppress("LeakingThis")
 @KotlinCleanup("too many to count")
@@ -141,6 +139,8 @@ open class Reviewer :
 
     // Record Audio
     private var isMicToolBarVisible = false
+
+    /** Controller for 'Check Pronunciation' feature */
     private var audioRecordingController: AudioRecordingController? = null
     private var isAudioUIInitialized = false
     private lateinit var micToolBarLayer: LinearLayout
@@ -398,7 +398,7 @@ open class Reviewer :
             R.id.action_bury_note -> buryNote()
             R.id.action_suspend_card -> suspendCard()
             R.id.action_suspend_note -> suspendNote()
-            R.id.action_reschedule_card -> showRescheduleCardDialog()
+            R.id.action_reschedule_card -> showDueDateDialog()
             R.id.action_reset_card_progress -> showResetCardDialog()
             R.id.action_delete -> {
                 Timber.i("Reviewer:: Delete note button pressed")
@@ -622,7 +622,12 @@ open class Reviewer :
             if (!isAudioUIInitialized) {
                 try {
                     audioRecordingController = AudioRecordingController()
-                    audioRecordingController?.createUI(this, micToolBarLayer)
+                    audioRecordingController?.createUI(
+                        this,
+                        micToolBarLayer,
+                        initialState = RecordingState.ImmediatePlayback.CLEARED,
+                        R.layout.activity_audio_recording_reviewer
+                    )
                 } catch (e: Exception) {
                     Timber.w(e, "unable to add the audio recorder to toolbar")
                     CrashReportService.sendExceptionReport(e, "Unable to create recorder tool bar")
@@ -649,33 +654,14 @@ open class Reviewer :
         }
     }
 
-    private fun showRescheduleCardDialog() {
-        val runnable = Consumer { days: Int ->
-            val cardIds = listOf(currentCard!!.id)
-            launchCatchingTask {
-                rescheduleCards(cardIds, days)
-            }
-        }
-        val dialog = rescheduleSingleCard(resources, currentCard!!, runnable)
+    private fun showDueDateDialog() {
+        val dialog = SetDueDateDialog.newInstance(listOf(currentCardId!!))
         showDialogFragment(dialog)
     }
 
     private fun showResetCardDialog() {
-        // Show confirmation dialog before resetting card progress
         Timber.i("showResetCardDialog() Reset progress button pressed")
-        // Show confirmation dialog before resetting card progress
-        val dialog = ConfirmationDialog()
-        val title = resources.getString(R.string.reset_card_dialog_title)
-        val message = resources.getString(R.string.reset_card_dialog_message)
-        dialog.setArgs(title, message)
-        val confirm = Runnable {
-            Timber.i("NoteEditor:: ResetProgress button pressed")
-            val cardIds = listOf(currentCard!!.id)
-            launchCatchingTask {
-                resetCards(cardIds)
-            }
-        }
-        dialog.setConfirm(confirm)
+        val dialog = ForgetCardsDialog.newInstance(listOf(currentCardId!!))
         showDialogFragment(dialog)
     }
 
@@ -733,6 +719,10 @@ open class Reviewer :
             }
             flagIcon.iconAlpha = alpha
         }
+
+        // Anki Desktop Translations
+        menu.findItem(R.id.action_reschedule_card).title =
+            CollectionManager.TR.actionsSetDueDate().toSentenceCase(R.string.sentence_set_due_date)
 
         // Undo button
         @DrawableRes val undoIconId: Int
@@ -1227,7 +1217,7 @@ open class Reviewer :
                 return true
             }
             ViewerCommand.RESCHEDULE_NOTE -> {
-                showRescheduleCardDialog()
+                showDueDateDialog()
                 return true
             }
             ViewerCommand.USER_ACTION_1 -> {

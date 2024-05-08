@@ -168,7 +168,7 @@
     <string name="import_interrupted">आयात व्यत्यय: अंकीड्रोइड बंद होता</string>
     <string name="export_preparation_in_progress">Preparing export&#8230;</string>
     <string name="export_ready_title">Export ready</string>
-    <string name="export_send_no_handlers">एपीकेजी हाताळण्यासाठी कोणतेही अनुप्रयोग उपलब्ध नाहीत. बचत...</string>
+    <string name="export_send_no_handlers">एपीकेजी हाताळण्यासाठी कोणतेही अनुप्रयोग उपलब्ध नाहीत. बचत&#8230;</string>
     <string name="export_save_apkg_successful">Successfully saved Anki package</string>
     <string name="export_save_apkg_unsuccessful">Save Anki package failed</string>
     <string name="export_share_title">Send Anki package using</string>
@@ -313,6 +313,7 @@
     <string name="expand_tag">Expand tag \'%s\'</string>
     <!-- Manage note types -->
     <string name="field_editor_model_not_available">Failed to access collection. Please try again!</string>
+    <string name="cd_manage_notetypes_add">Add a new note type</string>
     <!-- App Intro -->
     <string name="intro_ankidroid_tagline_one">Study less</string>
     <string name="intro_ankidroid_tagline_two">Remember more</string>

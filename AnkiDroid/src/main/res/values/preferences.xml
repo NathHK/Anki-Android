@@ -15,7 +15,6 @@
     <string name="time_limit_preference">timeLimit</string>
     <string name="timeout_answer_preference">timeoutAnswer</string>
     <string name="keep_screen_on_preference">keepScreenOn</string>
-    <string name="new_timezone_handling_preference">newTimezoneHandling</string>
     <string name="double_tap_time_interval_preference">doubleTapTimeInterval</string>
     <!-- Sync -->
     <string name="pref_sync_screen_key">syncScreen</string>
@@ -124,6 +123,7 @@
     <string name="show_all_hints_command_key">binding_SHOW_ALL_HINTS</string>
     <string name="add_note_command_key">binding_ADD_NOTE</string>
     <string name="reschedule_command_key">binding_RESCHEDULE_NOTE</string>
+    <string name="user_actions_controls_category_key">userActionsControls</string>
     <string name="user_action_1_key">binding_USER_ACTION_1</string>
     <string name="user_action_2_key">binding_USER_ACTION_2</string>
     <string name="user_action_3_key">binding_USER_ACTION_3</string>

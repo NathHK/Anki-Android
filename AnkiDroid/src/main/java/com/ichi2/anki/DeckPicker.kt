@@ -53,6 +53,8 @@ import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.os.bundleOf
 import androidx.core.text.parseAsHtml
+import androidx.core.view.MenuItemCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.commit
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.flowWithLifecycle
@@ -61,20 +63,22 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import anki.collection.OpChanges
+import anki.sync.SyncStatusResponse
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
 import com.ichi2.anim.ActivityTransitionAnimation.Direction.*
-import com.ichi2.anki.CollectionHelper.CollectionIntegrityStorageCheck
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.CollectionManager.withOpenColOrNull
 import com.ichi2.anki.InitialActivity.StartupFailure
 import com.ichi2.anki.InitialActivity.StartupFailure.*
 import com.ichi2.anki.StudyOptionsFragment.StudyOptionsListener
-import com.ichi2.anki.UIUtils.showThemedToast
 import com.ichi2.anki.analytics.UsageAnalytics
 import com.ichi2.anki.deckpicker.BITMAP_BYTES_PER_PIXEL
 import com.ichi2.anki.deckpicker.BackgroundImage
@@ -115,6 +119,9 @@ import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.ui.dialogs.storageMigrationFailedDialogIsShownOrPending
 import com.ichi2.anki.utils.SECONDS_PER_DAY
 import com.ichi2.anki.widgets.DeckAdapter
+import com.ichi2.anki.worker.SyncMediaWorker
+import com.ichi2.anki.worker.SyncWorker
+import com.ichi2.anki.worker.UniqueWorkNames
 import com.ichi2.annotations.NeedsTest
 import com.ichi2.async.*
 import com.ichi2.compat.CompatHelper.Companion.getSerializableCompat
@@ -128,6 +135,7 @@ import com.ichi2.utils.*
 import com.ichi2.utils.NetworkUtils.isActiveNetworkMetered
 import com.ichi2.widget.WidgetStatus
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import makeLinksClickable
@@ -228,6 +236,8 @@ open class DeckPicker :
         anchorView = findViewById<FloatingActionButton>(R.id.fab_main)
         addCallback(activeSnackbarCallback)
     }
+
+    private var syncMediaProgressJob: Job? = null
 
     // flag keeping track of when the app has been paused
     var activityPaused = false
@@ -388,6 +398,10 @@ open class DeckPicker :
             )
         }
         true
+    }
+
+    private val notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        Timber.i("notification permission: %b", it)
     }
 
     // ----------------------------------------------------------------------------
@@ -608,7 +622,7 @@ open class DeckPicker :
         val webviewPackageInfo = getAndroidSystemWebViewPackageInfo(packageManager)
         if (webviewPackageInfo == null) {
             val snackbarMessage = "No Android System WebView found"
-            showSnackbar(snackbarMessage, Snackbar.LENGTH_INDEFINITE)
+            postSnackbar(snackbarMessage, Snackbar.LENGTH_INDEFINITE)
             return
         }
 
@@ -616,7 +630,7 @@ open class DeckPicker :
         if (versionCode < OLDEST_WORKING_WEBVIEW_VERSION) {
             val snackbarMessage =
                 "The WebView version $versionCode is outdated (<$OLDEST_WORKING_WEBVIEW_VERSION)."
-            showSnackbar(snackbarMessage, Snackbar.LENGTH_INDEFINITE)
+            postSnackbar(snackbarMessage, Snackbar.LENGTH_INDEFINITE)
         }
     }
 
@@ -786,8 +800,10 @@ open class DeckPicker :
         floatingActionMenu.closeFloatingActionMenu(applyRiseAndShrinkAnimation = false)
         menuInflater.inflate(R.menu.deck_picker, menu)
         menu.findItem(R.id.action_export)?.title = TR.exportingExport()
+        setupMediaSyncMenuItem(menu)
         setupSearchIcon(menu.findItem(R.id.deck_picker_action_filter))
         toolbarSearchView = menu.findItem(R.id.deck_picker_action_filter).actionView as SearchView
+        toolbarSearchView?.maxWidth = Integer.MAX_VALUE
         // redraw menu synchronously to avoid flicker
         updateMenuFromState(menu)
         // ...then launch a task to possibly update the visible icons.
@@ -803,6 +819,31 @@ open class DeckPicker :
 
     private var migrationProgressPublishingJob: Job? = null
     private var cachedMigrationProgressMenuItemActionView: View? = null
+
+    private fun setupMediaSyncMenuItem(menu: Menu) {
+        // shouldn't be necessary, but `invalidateOptionsMenu()` is called way more than necessary
+        syncMediaProgressJob?.cancel()
+
+        val syncItem = menu.findItem(R.id.action_sync)
+        val progressIndicator = syncItem.actionView
+            ?.findViewById<LinearProgressIndicator>(R.id.progress_indicator)
+
+        val workManager = WorkManager.getInstance(this)
+        val flow = workManager.getWorkInfosForUniqueWorkFlow(UniqueWorkNames.SYNC_MEDIA)
+
+        syncMediaProgressJob = lifecycleScope.launch {
+            flow.flowWithLifecycle(lifecycle).collectLatest {
+                val workInfo = it.lastOrNull()
+                if (workInfo?.state == WorkInfo.State.RUNNING && progressIndicator?.isVisible == false) {
+                    Timber.i("DeckPicker: Showing media sync progress indicator")
+                    progressIndicator.isVisible = true
+                } else if (progressIndicator?.isVisible == true) {
+                    Timber.i("DeckPicker: Hiding media sync progress indicator")
+                    progressIndicator.isVisible = false
+                }
+            }
+        }
+    }
 
     /**
      * Set up the menu item that shows circular progress of storage migration.
@@ -950,32 +991,34 @@ open class DeckPicker :
     private fun updateSyncIconFromState(menuItem: MenuItem, state: OptionsMenuState) {
         if (state.mediaMigrationState is MediaMigrationState.Ongoing) {
             menuItem.isVisible = false
-        } else {
-            menuItem.isVisible = true
+            return
+        }
+        menuItem.isVisible = true
 
-            menuItem.setTitle(
-                when (state.syncIcon) {
-                    SyncIconState.Normal, SyncIconState.PendingChanges -> R.string.button_sync
-                    SyncIconState.OneWay -> R.string.sync_menu_title_one_way_sync
-                    SyncIconState.NotLoggedIn -> R.string.sync_menu_title_no_account
-                }
-            )
-
-            when (state.syncIcon) {
-                SyncIconState.Normal -> {
-                    BadgeDrawableBuilder.removeBadge(menuItem)
-                }
-                SyncIconState.PendingChanges -> {
-                    BadgeDrawableBuilder(this)
-                        .withColor(getColor(R.color.badge_warning))
-                        .replaceBadge(menuItem)
-                }
-                SyncIconState.OneWay, SyncIconState.NotLoggedIn -> {
-                    BadgeDrawableBuilder(this)
-                        .withText('!')
-                        .withColor(getColor(R.color.badge_error))
-                        .replaceBadge(menuItem)
-                }
+        val provider = MenuItemCompat.getActionProvider(menuItem) as? SyncActionProvider
+            ?: return
+        val tooltipText = when (state.syncIcon) {
+            SyncIconState.Normal, SyncIconState.PendingChanges -> R.string.button_sync
+            SyncIconState.OneWay -> R.string.sync_menu_title_one_way_sync
+            SyncIconState.NotLoggedIn -> R.string.sync_menu_title_no_account
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            provider.setTooltipText(getString(tooltipText))
+        }
+        when (state.syncIcon) {
+            SyncIconState.Normal -> {
+                BadgeDrawableBuilder.removeBadge(provider)
+            }
+            SyncIconState.PendingChanges -> {
+                BadgeDrawableBuilder(this)
+                    .withColor(getColor(R.color.badge_warning))
+                    .replaceBadge(provider)
+            }
+            SyncIconState.OneWay, SyncIconState.NotLoggedIn -> {
+                BadgeDrawableBuilder(this)
+                    .withText('!')
+                    .withColor(getColor(R.color.badge_error))
+                    .replaceBadge(provider)
             }
         }
     }
@@ -1034,7 +1077,14 @@ open class DeckPicker :
             }
             R.id.action_sync -> {
                 Timber.i("DeckPicker:: Sync button pressed")
-                sync()
+                val actionProvider = MenuItemCompat.getActionProvider(item) as? SyncActionProvider
+                if (actionProvider?.isProgressShown == true) {
+                    launchCatchingTask {
+                        monitorMediaSync(this@DeckPicker)
+                    }
+                } else {
+                    sync()
+                }
                 return true
             }
             R.id.action_scoped_storage_migrate -> {
@@ -1153,17 +1203,17 @@ open class DeckPicker :
         invalidateOptionsMenu()
     }
 
-    public override fun onSaveInstanceState(savedInstanceState: Bundle) {
-        super.onSaveInstanceState(savedInstanceState)
-        savedInstanceState.putBoolean("mIsFABOpen", floatingActionMenu.isFABOpen)
-        savedInstanceState.putBoolean("migrateStorageAfterMediaSyncCompleted", migrateStorageAfterMediaSyncCompleted)
+    public override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("mIsFABOpen", floatingActionMenu.isFABOpen)
+        outState.putBoolean("migrateStorageAfterMediaSyncCompleted", migrateStorageAfterMediaSyncCompleted)
         importColpkgListener?.let {
             if (it is DatabaseRestorationListener) {
-                savedInstanceState.getString("dbRestorationPath", it.newAnkiDroidDirectory)
+                outState.getString("dbRestorationPath", it.newAnkiDroidDirectory)
             }
         }
-        exportingDelegate.onSaveInstanceState(savedInstanceState)
-        savedInstanceState.putSerializable("mediaUsnOnConflict", mediaUsnOnConflict)
+        exportingDelegate.onSaveInstanceState(outState)
+        outState.putSerializable("mediaUsnOnConflict", mediaUsnOnConflict)
         floatingActionMenu.showFloatingActionButton()
     }
 
@@ -1200,28 +1250,68 @@ open class DeckPicker :
         }
     }
 
-    private fun automaticSync() {
-        val preferences = baseContext.sharedPrefs()
+    private suspend fun automaticSync(runInBackground: Boolean = false) {
+        /**
+         * @return whether there are collection changes to be sync.
+         *
+         * It DOES NOT include if there are media to be synced.
+         */
+        suspend fun areThereChangesToSync(): Boolean {
+            val auth = syncAuth() ?: return false
+            val status = withContext(Dispatchers.IO) {
+                CollectionManager.getBackend().syncStatus(auth)
+            }.required
 
-        // Check whether the option is selected, the user is signed in, last sync was AUTOMATIC_SYNC_TIME ago
-        // (currently 10 minutes), and is not under a metered connection (if not allowed by preference)
-        val lastSyncTime = preferences.getLong("lastSyncTime", 0)
-        val autoSyncIsEnabled = preferences.getBoolean("automaticSyncMode", false)
-        val automaticSyncIntervalInMS = AUTOMATIC_SYNC_MINIMAL_INTERVAL_IN_MINUTES * 60 * 1000
-        val syncIntervalPassed =
-            TimeManager.time.intTimeMS() - lastSyncTime > automaticSyncIntervalInMS
-        val isNotBlockedByMeteredConnection = preferences.getBoolean(
-            getString(R.string.metered_sync_key),
-            false
-        ) || !isActiveNetworkMetered()
-        val isMigratingStorage = mediaMigrationIsInProgress(this)
-        if (isLoggedIn() && autoSyncIsEnabled && NetworkUtils.isOnline && syncIntervalPassed && isNotBlockedByMeteredConnection && !isMigratingStorage) {
-            Timber.i("Triggering Automatic Sync")
-            sync()
+            return when (status) {
+                SyncStatusResponse.Required.NO_CHANGES,
+                SyncStatusResponse.Required.UNRECOGNIZED,
+                null -> false
+                SyncStatusResponse.Required.FULL_SYNC,
+                SyncStatusResponse.Required.NORMAL_SYNC -> true
+            }
+        }
+
+        fun syncIntervalPassed(): Boolean {
+            val lastSyncTime = sharedPrefs().getLong("lastSyncTime", 0)
+            val automaticSyncIntervalInMS = AUTOMATIC_SYNC_MINIMAL_INTERVAL_IN_MINUTES * 60 * 1000
+            return TimeManager.time.intTimeMS() - lastSyncTime > automaticSyncIntervalInMS
+        }
+
+        val isAutoSyncEnabled = sharedPrefs().getBoolean("automaticSyncMode", false)
+
+        val isBlockedByMeteredConnection = !sharedPrefs().getBoolean(getString(R.string.metered_sync_key), false) &&
+            isActiveNetworkMetered()
+
+        when {
+            !isAutoSyncEnabled -> Timber.d("autoSync: not enabled")
+            isBlockedByMeteredConnection -> Timber.d("autoSync: blocked by metered connection")
+            !NetworkUtils.isOnline -> Timber.d("autoSync: offline")
+            !runInBackground && !syncIntervalPassed() -> Timber.d("autoSync: interval not passed")
+            !isLoggedIn() -> Timber.d("autoSync: not logged in")
+            mediaMigrationIsInProgress(this) -> Timber.d("autoSync: migrating storage")
+            !areThereChangesToSync() -> {
+                Timber.d("autoSync: no collection changes to sync. Syncing media if set")
+                if (shouldFetchMedia(sharedPrefs())) {
+                    val auth = syncAuth() ?: return
+                    SyncMediaWorker.start(this, auth)
+                }
+                setLastSyncTimeToNow()
+            }
+            else -> {
+                if (runInBackground) {
+                    Timber.i("autoSync: starting background")
+                    val auth = syncAuth() ?: return
+                    SyncWorker.start(this, auth, shouldFetchMedia(sharedPrefs()))
+                } else {
+                    Timber.i("autoSync: starting foreground")
+                    sync()
+                }
+            }
         }
     }
 
     @Deprecated("Deprecated in Java")
+    @Suppress("DEPRECATION")
     override fun onBackPressed() {
         val preferences = baseContext.sharedPrefs()
         if (isDrawerOpen) {
@@ -1236,8 +1326,13 @@ open class DeckPicker :
                         false
                     ) || backButtonPressedToExit
                 ) {
-                    automaticSync()
-                    finish()
+                    // can't use launchCatchingTask because any errors
+                    // would need to be shown in the UI
+                    lifecycleScope.launch {
+                        automaticSync(runInBackground = true)
+                    }.invokeOnCompletion {
+                        finish()
+                    }
                 } else {
                     showSnackbar(R.string.back_pressed_once, Snackbar.LENGTH_SHORT)
                 }
@@ -1317,7 +1412,9 @@ open class DeckPicker :
                 dialogHandler.sendMessage(OneWaySyncDialog(message).toMessage())
             }
         }
-        automaticSync()
+        launchCatchingTask {
+            automaticSync()
+        }
     }
 
     private fun showCollectionErrorDialog() {
@@ -1423,7 +1520,7 @@ open class DeckPicker :
             // Specifying a checkpoint in the future is not supported, please don't do it!
             if (current < upgradeDbVersion) {
                 Timber.e("Invalid value for CHECK_DB_AT_VERSION")
-                showSnackbar("Invalid value for CHECK_DB_AT_VERSION")
+                postSnackbar("Invalid value for CHECK_DB_AT_VERSION")
                 onFinishedStartup()
                 return
             }
@@ -1473,13 +1570,28 @@ open class DeckPicker :
                 // Don't show new features dialog for development builds
                 InitialActivity.setUpgradedToLatestVersion(preferences)
                 val ver = resources.getString(R.string.updated_version, VersionUtils.pkgVersionName)
-                showSnackbar(ver, Snackbar.LENGTH_SHORT)
+                postSnackbar(ver, Snackbar.LENGTH_SHORT)
                 showStartupScreensAndDialogs(preferences, 2)
             }
         } else {
             // This is the main call when there is nothing special required
             Timber.i("No startup screens required")
             onFinishedStartup()
+        }
+    }
+
+    // #16061. We have to queue snackbar to avoid the misaligned snackbar showed from onCreate()
+    private fun postSnackbar(
+        text: CharSequence,
+        duration: Int = Snackbar.LENGTH_LONG
+    ) {
+        val view: View? = findViewById(R.id.root_layout)
+        if (view != null) {
+            view.post {
+                showSnackbar(text, duration)
+            }
+        } else {
+            showSnackbar(text, duration)
         }
     }
 
@@ -1699,6 +1811,8 @@ open class DeckPicker :
             return
         }
 
+        MyAccount.checkNotificationPermission(this, notificationPermissionLauncher)
+
         /** Nested function that makes the connection to
          * the sync server and starts syncing the data */
         fun doSync() {
@@ -1888,12 +2002,12 @@ open class DeckPicker :
             return
         }
 
-        when (val completedDeckStatus = queryCompletedDeckCustomStudyAction(did)) {
+        when (queryCompletedDeckCustomStudyAction(did)) {
             CompletedDeckStatus.LEARN_AHEAD_LIMIT_REACHED,
             CompletedDeckStatus.REGULAR_DECK_NO_MORE_CARDS_TODAY,
             CompletedDeckStatus.DYNAMIC_DECK_NO_LIMITS_REACHED,
             CompletedDeckStatus.DAILY_STUDY_LIMIT_REACHED -> {
-                onDeckCompleted(did, completedDeckStatus, ::updateUi)
+                onDeckCompleted()
             }
             CompletedDeckStatus.EMPTY_REGULAR_DECK -> {
                 // If the deck is empty (& has no children) then show a message saying it's empty
@@ -1923,7 +2037,7 @@ open class DeckPicker :
     @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
     @RustCleanup("backup with 5 minute timer, instead of deck list refresh")
     fun updateDeckList() {
-        if (CollectionHelper.lastOpenFailure != null) {
+        if (!CollectionManager.isOpenUnsafe()) {
             return
         }
         if (Build.FINGERPRINT != "robolectric") {
@@ -2129,6 +2243,9 @@ open class DeckPicker :
                     decks.remove(listOf(did))
                 }
             }
+            // After deletion: decks.current() reverts to Default, necessitating `focusedDeck`
+            // to match and avoid unnecessary scrolls in `renderPage()`.
+            focusedDeck = Consts.DEFAULT_DECK_ID
             showSnackbar(TR.browsingCardsDeleted(changes.count), Snackbar.LENGTH_SHORT) {
                 setAction(R.string.undo) { undo() }
             }
@@ -2520,9 +2637,14 @@ open class DeckPicker :
     }
 
     override fun onImportColpkg(colpkgPath: String?) {
-        invalidateOptionsMenu()
-        updateDeckList()
-        importColpkgListener?.onImportColpkg(colpkgPath)
+        launchCatchingTask {
+            // as the current collection is closed before importing a new collection, make sure the
+            // new collection is open before the code to update the DeckPicker ui runs
+            withCol { }
+            invalidateOptionsMenu()
+            updateDeckList()
+            importColpkgListener?.onImportColpkg(colpkgPath)
+        }
     }
 
     override fun onMediaSyncCompleted(data: SyncCompletion) {
@@ -2567,11 +2689,11 @@ open class DeckPicker :
         REGULAR_DECK_NO_MORE_CARDS_TODAY
     }
 
-    override fun getApkgFileImportResultLauncher(): ActivityResultLauncher<Intent?> {
+    override fun getApkgFileImportResultLauncher(): ActivityResultLauncher<Intent> {
         return apkgFileImportResultLauncher
     }
 
-    override fun getCsvFileImportResultLauncher(): ActivityResultLauncher<Intent?> {
+    override fun getCsvFileImportResultLauncher(): ActivityResultLauncher<Intent> {
         return csvImportResultLauncher
     }
 }
@@ -2619,7 +2741,7 @@ class OneWaySyncDialog(val message: String?) : DialogHandlerMessage(
         val dialog = ConfirmationDialog()
         val confirm = Runnable {
             // Bypass the check once the user confirms
-            CollectionHelper.instance.getColUnsafe(AnkiDroidApp.instance)!!.modSchemaNoCheck()
+            CollectionManager.getColUnsafe().modSchemaNoCheck()
         }
         dialog.setConfirm(confirm)
         dialog.setArgs(message)

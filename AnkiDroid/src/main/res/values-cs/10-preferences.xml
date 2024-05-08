@@ -166,8 +166,8 @@
     <string name="vertical_centering_summ">Obsah karet vycentrovat svisle na střed</string>
     <string name="pref_double_tap_time_interval" maxLength="41">Čas dvojklepnutí (milisekundy)</string>
     <string name="pref_double_tap_time_interval_summary">Druhé klepnutí na tlačítka odpovědí bude ignorováno, pokud tento čas neuplynul. Zabraňuje to náhodným dvojím klepnutím</string>
-    <string name="pref_show_answer_long_press" maxLength="41">Čas dlouhého stisknutí pro zobrazení odpovědi (ms)</string>
-    <string name="pref_show_answer_long_press_summary">Minimální čas dlouhého stisknutí před tím, než tlačítko Zobrazit odpověď registruje dotyk. Může snížit pravděpodobnost nechtěného stisknutí tlačítka. Výchozí hodnota je 0ms</string>
+    <string name="pref_show_answer_long_press_time" maxLength="41">Čas dlouhého stisknutí pro zobrazení odpovědi</string>
+    <string name="pref_show_answer_long_press_time_summary">Minimální doba stisku předtím, než tlačítko zobrazit odpověď zaregistruje dotyk.</string>
     <string name="show_estimates" maxLength="41">Zobrazit čas tlačítek</string>
     <string name="show_estimates_summ">Zobrazit čas příštího opakování na tlačítkách odpovědí</string>
     <string name="show_large_answer_buttons" maxLength="41">Zobrazit velká tlačítka odpovědí</string>
@@ -181,7 +181,6 @@
     <string name="use_current" maxLength="41">Balíček pro nové karty</string>
     <string name="learn_cutoff" maxLength="41">Limit učení se napřed</string>
     <string name="time_limit" maxLength="41">Časové omezení</string>
-    <string name="new_timezone" maxLength="41">Nové zpracování časového pásma</string>
     <string name="day_offset_with_description" maxLength="41">Začátek příštího dne</string>
     <plurals name="day_offset_summ" comment="%d is going to be replaced with the number of hours past midnight. It can be replaced if something else suits better the translation">
         <item quantity="one">%d hodina po půlnoci</item>

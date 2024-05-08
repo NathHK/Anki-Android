@@ -59,7 +59,6 @@
     <!-- DeckPicker.kt -->
     <string name="expand">Espandi</string>
     <string name="collapse">Nascondi</string>
-    <string name="study_more">Studia ancora</string>
     <plurals name="reviewer_window_title">
         <item quantity="one">%d minuto rimanente</item>
         <item quantity="other">%d minuti rimanente</item>
@@ -135,12 +134,10 @@
     <string name="empty_filtered_deck">Svuotamento del mazzo filtrato in corso&#8230;</string>
     <string name="custom_study_deck_name">Sessione di studio personalizzato</string>
     <string name="custom_study_deck_exists">Rinominare prima il mazzo di studio personalizzato esistente.</string>
-    <string name="empty_deck">Questo mazzo è vuoto</string>
     <string name="search_deck" comment="Deck search for selecting it">Ricerca mazzo</string>
+    <string name="empty_deck">Questo mazzo è vuoto</string>
     <string name="search_for_download_deck" comment="Deck search value for downloading deck">Ricerca mazzo</string>
     <string name="invalid_deck_name">Nome mazzo non valido</string>
-    <string name="studyoptions_limit_reached">Raggiunto il limite di studio giornaliero.</string>
-    <string name="studyoptions_empty_schedule">Nessuna carta da studiare</string>
     <string name="studyoptions_congrats_finished">Congratulazioni! Hai finito per ora.</string>
     <string name="studyoptions_no_cards_due">Nessuna carta da ripetere ora.</string>
     <string name="sd_card_not_mounted">Dispositivo archiviazione non montato</string>
@@ -149,7 +146,7 @@
     <string name="cancel_sync_confirm" tools:ignore="UnusedResources">Vuoi annullare la sincronizzazione?</string>
     <string name="continue_sync" tools:ignore="UnusedResources">Continua la sincronizzazione</string>
     <string name="sync_cancelled" tools:ignore="UnusedResources">Sincronizzazione annullata</string>
-    <string name="sync_cancel_message" tools:ignore="UnusedResources">Annullo...\nPotrebbe richiedere del tempo.</string>
+    <string name="sync_cancel_message" tools:ignore="UnusedResources">Annullo&#8230;\nPotrebbe richiedere del tempo.</string>
     <string name="syncing_media">Sincronizzazione media in corso</string>
     <string name="export_deck">Esporta il mazzo</string>
     <string name="nothing">Niente</string>
@@ -256,4 +253,5 @@
     <string name="storage_access_summary">Salva la tua collezione in un posto sicuro che non verrà cancellato se si disinstalla l\'app</string>
     <string name="all_files_access_title" comment="Name of the “All files access” permission from Android 10 and after">Accesso a tutti i file</string>
     <string name="image_occlusion">Occludi immagine</string>
+    <string name="remove_account" comment="open a website to start the deletion of an AnkiWeb account">Remove account</string>
 </resources>

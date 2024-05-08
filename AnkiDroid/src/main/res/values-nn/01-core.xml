@@ -59,7 +59,6 @@
     <!-- DeckPicker.kt -->
     <string name="expand">Utvid</string>
     <string name="collapse">Skjul</string>
-    <string name="study_more">Study more</string>
     <plurals name="reviewer_window_title">
         <item quantity="one">%d minute left</item>
         <item quantity="other">%d minutes left</item>
@@ -128,19 +127,17 @@
     grant AnkiDroid the \'Storage\' permission. This needs to be a fairly generic message as implementations
     of the permissions/app info screen will differ between devices. -->
     <string name="startup_no_storage_permission">Gjev AnkiDroid tilgjenge til «lagring» for å halda fram</string>
-    <string name="rebuild_filtered_deck">Den filtrerte kortstokken bygges om...</string>
+    <string name="rebuild_filtered_deck">Den filtrerte kortstokken bygges om&#8230;</string>
     <string name="rebuild_cram_label">Gjenoppbygg</string>
     <string name="empty_cram_label">Tøm</string>
     <string name="create_subdeck">Lag ein underkortleik</string>
-    <string name="empty_filtered_deck">Den filtrerte kortstokken tømmes...</string>
+    <string name="empty_filtered_deck">Den filtrerte kortstokken tømmes&#8230;</string>
     <string name="custom_study_deck_name">Tilpasset studiesesjon</string>
     <string name="custom_study_deck_exists">Gi den eksisterende tilpassede studiestokken nytt navn først</string>
-    <string name="empty_deck">Denne kortleiken er tom</string>
     <string name="search_deck" comment="Deck search for selecting it">Finn kortstokk</string>
+    <string name="empty_deck">Denne kortleiken er tom</string>
     <string name="search_for_download_deck" comment="Deck search value for downloading deck">Finn kortstokk</string>
     <string name="invalid_deck_name">Ugildt namn på kortleik</string>
-    <string name="studyoptions_limit_reached">Daily study limit reached</string>
-    <string name="studyoptions_empty_schedule">No cards scheduled to study</string>
     <string name="studyoptions_congrats_finished">Congratulations! You have finished for now.</string>
     <string name="studyoptions_no_cards_due">Ingen kort forfaller ennå</string>
     <string name="sd_card_not_mounted">Device storage not mounted</string>
@@ -149,7 +146,7 @@
     <string name="cancel_sync_confirm" tools:ignore="UnusedResources">Vil du avbryte synkroniseringa?</string>
     <string name="continue_sync" tools:ignore="UnusedResources">Fortsett synkronisering</string>
     <string name="sync_cancelled" tools:ignore="UnusedResources">Synkronisering Avbrutt</string>
-    <string name="sync_cancel_message" tools:ignore="UnusedResources">Avbryter...\nDet kan ta en stund.</string>
+    <string name="sync_cancel_message" tools:ignore="UnusedResources">Avbryter&#8230;\nDet kan ta en stund.</string>
     <string name="syncing_media">Syncing media</string>
     <string name="export_deck">Før ut kortleiken</string>
     <string name="nothing">Ingenting</string>
@@ -256,4 +253,5 @@
     <string name="storage_access_summary">Saves your collection in a safe place that will not be deleted if the app is uninstalled</string>
     <string name="all_files_access_title" comment="Name of the “All files access” permission from Android 10 and after">All files access</string>
     <string name="image_occlusion">Image Occlusion</string>
+    <string name="remove_account" comment="open a website to start the deletion of an AnkiWeb account">Remove account</string>
 </resources>

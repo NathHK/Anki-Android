@@ -23,23 +23,22 @@ import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.annotation.CallSuper
 import androidx.annotation.LayoutRes
 import androidx.appcompat.app.AlertDialog
+import androidx.core.net.toUri
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.ichi2.anki.CollectionHelper
 import com.ichi2.anki.R
-import com.ichi2.anki.ViewerResourceHandler
 import com.ichi2.anki.dialogs.TtsVoicesDialogFragment
 import com.ichi2.anki.localizedErrorMessage
-import com.ichi2.anki.pages.AnkiServer
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.themes.Themes
 import kotlinx.coroutines.flow.launchIn
@@ -81,9 +80,12 @@ abstract class CardViewerFragment(@LayoutRes layout: Int) : Fragment(layout) {
                 displayZoomControls = false
                 allowFileAccess = true
                 domStorageEnabled = true
+                // allow videos to autoplay via our JavaScript eval
+                mediaPlaybackRequiresUserGesture = false
             }
+            val baseUrl = CollectionHelper.getMediaDirectory(requireContext()).toURI().toString()
             loadDataWithBaseURL(
-                "http://${AnkiServer.LOCALHOST}/",
+                baseUrl,
                 stdHtml(requireContext(), Themes.currentTheme.isNightMode),
                 "text/html",
                 null,
@@ -119,36 +121,48 @@ abstract class CardViewerFragment(@LayoutRes layout: Int) : Fragment(layout) {
     }
 
     private fun onCreateWebViewClient(savedInstanceState: Bundle?): WebViewClient {
-        val resourceHandler = ViewerResourceHandler(requireContext(), AnkiServer.LOCALHOST)
         return object : WebViewClient() {
-            override fun shouldInterceptRequest(
-                view: WebView?,
-                request: WebResourceRequest
-            ): WebResourceResponse? {
-                return resourceHandler.shouldInterceptRequest(request)
-            }
-
             override fun onPageFinished(view: WebView?, url: String?) {
                 viewModel.onPageFinished(isAfterRecreation = savedInstanceState != null)
             }
 
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                val urlString = request.url.toString()
+                return handleUrl(request.url)
+            }
+
+            @Suppress("DEPRECATION") // necessary in API 23
+            @Deprecated("Deprecated in Java")
+            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                if (view == null || url == null) return super.shouldOverrideUrlLoading(view, url)
+                return handleUrl(url.toUri())
+            }
+
+            private fun handleUrl(url: Uri): Boolean {
+                val urlString = url.toString()
+
                 if (urlString.startsWith("playsound:")) {
                     viewModel.playSoundFromUrl(urlString)
+                    return true
+                }
+                if (urlString.startsWith("videoended:")) {
+                    viewModel.onVideoFinished()
+                    return true
+                }
+                if (urlString.startsWith("videopause:")) {
+                    viewModel.onVideoPaused()
                     return true
                 }
                 if (urlString.startsWith("tts-voices:")) {
                     TtsVoicesDialogFragment().show(childFragmentManager, null)
                     return true
                 }
-                try {
-                    openUrl(request.url)
-                    return true
-                } catch (_: Exception) {
+                return try {
+                    openUrl(url)
+                    true
+                } catch (_: Throwable) {
                     Timber.w("Could not open url")
+                    false
                 }
-                return false
             }
 
             override fun onReceivedError(

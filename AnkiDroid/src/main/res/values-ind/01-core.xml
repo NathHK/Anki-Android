@@ -59,7 +59,6 @@
     <!-- DeckPicker.kt -->
     <string name="expand">Perluas</string>
     <string name="collapse">Tutup</string>
-    <string name="study_more">Study more</string>
     <plurals name="reviewer_window_title">
         <item quantity="other">%d menit lagi</item>
     </plurals>
@@ -132,12 +131,10 @@
     <string name="empty_filtered_deck">Mengosongkan dek yang telah difilter</string>
     <string name="custom_study_deck_name">Sesi belajar kustom</string>
     <string name="custom_study_deck_exists">Ubah nama dek belajar kustom yang ada</string>
-    <string name="empty_deck">Dek ini kosong</string>
     <string name="search_deck" comment="Deck search for selecting it">Mencari Dek</string>
+    <string name="empty_deck">Dek ini kosong</string>
     <string name="search_for_download_deck" comment="Deck search value for downloading deck">Pencarian Dek</string>
     <string name="invalid_deck_name">Nama dek tidak valid</string>
-    <string name="studyoptions_limit_reached">Daily study limit reached</string>
-    <string name="studyoptions_empty_schedule">No cards scheduled to study</string>
     <string name="studyoptions_congrats_finished">Congratulations! You have finished for now.</string>
     <string name="studyoptions_no_cards_due">Belum ada kartu jatuh tempo.</string>
     <string name="sd_card_not_mounted">Penyimpanan perangkat tidak terpasang</string>
@@ -251,4 +248,5 @@
     <string name="storage_access_summary">Menyimpan koleksi Anda dalam tempat yang aman yang tidak akan terhapus jika aplikasi dicopot pemasangannya</string>
     <string name="all_files_access_title" comment="Name of the “All files access” permission from Android 10 and after">Akses semua berkas</string>
     <string name="image_occlusion">Oklusi Gambar</string>
+    <string name="remove_account" comment="open a website to start the deletion of an AnkiWeb account">Remove account</string>
 </resources>

@@ -164,8 +164,8 @@
     <string name="vertical_centering_summ">ପତ୍ରଗୁଡ଼ିକର ଵିଷୟବସ୍ତୁକୁ ଭୂଲମ୍ବ ଭାଵରେ କେନ୍ଦ୍ରିତ କରିରଖିବା</string>
     <string name="pref_double_tap_time_interval" maxLength="41">ଡବଲ୍ ଟ୍ୟାପ୍ ସମୟ ଅନ୍ତରାଳ (ମିଲିସେକେଣ୍ଡ)</string>
     <string name="pref_double_tap_time_interval_summary">ଯଦି ଏହି ସମୟ ଅତିବାହିତ ହୋଇନାହିଁ ତେବେ ଉତ୍ତର ବଟନର ଦ୍ୱିତୀୟ ଟ୍ୟାପ୍ ଅଣଦେଖା କରାଯିବ। ଏହା ଆକସ୍ମିକ ଡବଲ୍ ଟ୍ୟାପ୍ ପ୍ରତିରୋଧ କରେ</string>
-    <string name="pref_show_answer_long_press" maxLength="41">ଉତ୍ତର ଦେଖାଅ ଦୀର୍ଘ-ସ୍ପର୍ଶ ସମୟ (ମିଲିସେକେଣ୍ଡ)</string>
-    <string name="pref_show_answer_long_press_summary">Minimum long-press time before the show answer button will register a touch. May reduce the chance of accidental extra button presses. Default is 0ms</string>
+    <string name="pref_show_answer_long_press_time" maxLength="41">Show answer long-press time</string>
+    <string name="pref_show_answer_long_press_time_summary">Minimum pressing time before the show answer button registers a touch.</string>
     <string name="show_estimates" maxLength="41">ବଟନ୍ ସମୟ ଦେଖାଇବା</string>
     <string name="show_estimates_summ">ଉତ୍ତର ବଟନ୍‌ଗୁଡ଼ିକରେ ପରଵର୍ତ୍ତୀ ସମୀକ୍ଷା ସମୟ ଦର୍ଶାଇବା</string>
     <string name="show_large_answer_buttons" maxLength="41">ବଡ଼ ଉତ୍ତର ବଟନ୍ ଦେଖାଇବା</string>
@@ -179,7 +179,6 @@
     <string name="use_current" maxLength="41">ନୂଆ ପତ୍ର ପାଇଁ ତାସଖଣ୍ଡ</string>
     <string name="learn_cutoff" maxLength="41">ଆଗୁଆ ଶିଖିବା ସମୟସୀମା</string>
     <string name="time_limit" maxLength="41">ଟାଇମ୍ ବକ୍ସ ସମୟ ସୀମା</string>
-    <string name="new_timezone" maxLength="41">ନୂତନ ସମୟମଣ୍ଡଳ ପରିଚାଳନା</string>
     <string name="day_offset_with_description" maxLength="41">ପରଵର୍ତ୍ତୀ ଦିନର ଆରମ୍ଭ</string>
     <plurals name="day_offset_summ" comment="%d is going to be replaced with the number of hours past midnight. It can be replaced if something else suits better the translation">
         <item quantity="one">ମଧ୍ୟରାତ୍ରିରୁ %d ଘଣ୍ଟା ପରେ</item>

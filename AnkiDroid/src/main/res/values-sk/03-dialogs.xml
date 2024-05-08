@@ -61,7 +61,6 @@
         <item quantity="other">%d premiestnených kartičiek</item>
     </plurals>
     <string name="reset_card_dialog_title">Vynulovať zaznamenaný priebeh v učení kartičky</string>
-    <string name="reset_card_dialog_message">Táto kartička bude umiestnená na posledné miesto v poradí nových kartičiek</string>
     <plurals name="reset_cards_dialog_acknowledge">
         <item quantity="one">%d resetovaná kartička</item>
         <item quantity="few">%d resetované kartičky</item>
@@ -69,27 +68,12 @@
         <item quantity="other">%d resetovaných kartičiek</item>
     </plurals>
     <!-- Reschedule Card Dialog -->
-    <plurals name="reschedule_cards_dialog_title_new">
-        <item quantity="one">Reschedule %d card</item>
-        <item quantity="few">Reschedule %d cards</item>
-        <item quantity="many">Reschedule %d cards</item>
-        <item quantity="other">Reschedule %d cards</item>
-    </plurals>
-    <plurals name="reschedule_card_dialog_interval">
-        <item quantity="one">Súčasný interval: %d deň</item>
-        <item quantity="few">Súčasný interval: %d dni</item>
-        <item quantity="many">Súčasný interval: %d dní</item>
-        <item quantity="other">Súčasný interval: %d dní</item>
-    </plurals>
-    <string name="reschedule_card_dialog_message">Preplánovať opakovanie pre x dní:</string>
     <plurals name="reschedule_cards_dialog_acknowledge">
         <item quantity="one">%d preplánovaná kartička</item>
         <item quantity="few">%d preplánované kartičky</item>
         <item quantity="many">%d preplánovaných kartičiek</item>
         <item quantity="other">%d preplánovaných kartičiek</item>
     </plurals>
-    <string name="reschedule_card_dialog_new_card_warning">Nová kartička je preplánovaná. Preplánovanie tiež mení nové kartičky na kartičky na zopakovanie. Použite možnosť ‘premiestniť kartičku’ na zmenu pozície novej kartičky v rámci nového radu</string>
-    <string name="reschedule_card_dialog_warning_ease_reset">Preplánovanie tiež resetuje ako plánovač pracuje s kartička v budúcnosti (ľahkosť bude nastavená na %d%%)</string>
     <string name="answering_error_title">Chyba databázy</string>
     <string name="answering_error_message">Zápis zbierky zlyhal. Databáza môže byť poškodená alebo na úložisku nie je dostatok miesta.\n\nAk sa toto stáva častejšie, skúste kontrolu databázy, opravu zbierky alebo jej obnovu zo zálohy. Ak to chcete urobiť, stlačte  “možnosti” .\n\Alebo to mohla byť tiež AnkiDroid chyba; prosím oznámte túto chybu aby sme to mohli skontrolovať.</string>
     <string name="answering_error_report">Nahlásiť chybu</string>
@@ -121,7 +105,7 @@
     <string name="dialog_keep">Keep</string>
     <string name="dialog_remove">Remove</string>
     <string name="dialog_continue">Pokračovať</string>
-    <string name="dialog_processing">Processing...</string>
+    <string name="dialog_processing">Processing&#8230;</string>
     <string name="dialog_positive_create" comment="Create a new collection, probably erasing the previous one, may be necessary in case of error.">Vytvoriť</string>
     <string name="dialog_positive_delete">Vymazať</string>
     <!-- Currently unsued, should be useful in the future -->
@@ -141,7 +125,7 @@
     <string name="check_media_no_unused_missing">Neboli nájdené žiadne nepoužívané alebo chýbajúce súbory</string>
     <string name="check_media_db_updated">Databáza multimédií bola opravená</string>
     <string name="check_media_delete_unused">Vymazať nepoužívané</string>
-    <string name="delete_media_message">Médiá sa vymazávajú...</string>
+    <string name="delete_media_message">Médiá sa vymazávajú&#8230;</string>
     <string name="delete_media_result_title">Výsledok vymazania</string>
     <plurals name="delete_media_result_message">
         <item quantity="one">%d vymazaný súbor</item>
@@ -260,4 +244,28 @@
     <string name="dismiss_backup_warning_upgrade">        Due to Android privacy changes, your data and automated backups will be inaccessible if the app is uninstalled
     </string>
     <string name="deck_already_exists">Deck already exists</string>
+    <string name="create_deck_numeric_hint">If you have deck ordering issues (e.g. ‘10’ appears before ‘2’), replace ‘2’ with ‘02’</string>
+    <!-- Set Due Date -->
+    <string name="set_due_date_match_interval" comment="when setting a card\'s due date, this checkbox also changes the interval of the card">Set interval to same value</string>
+    <plurals name="set_due_date_single_day_label" comment="a date control is provided afterwards">
+        <item quantity="one">Show card in</item>
+        <item quantity="few">Show cards in</item>
+        <item quantity="many">Show cards in</item>
+        <item quantity="other">Show cards in</item>
+    </plurals>
+    <plurals name="set_due_date_range_label" comment="a date control is provided afterwards">
+        <item quantity="one">Show card in range</item>
+        <item quantity="few">Show cards in range</item>
+        <item quantity="many">Show cards in range</item>
+        <item quantity="other">Show cards in range</item>
+    </plurals>
+    <plurals name="set_due_date_label_suffix" comment="a suffix on a text field allowing a user to enter a number of days">
+        <item quantity="one">day</item>
+        <item quantity="few">days</item>
+        <item quantity="many">days</item>
+        <item quantity="other">days</item>
+    </plurals>
+    <string name="range_delimiter" comment="Placed between two input boxes to denote a range">–</string>
+    <string name="set_due_date_range_start" comment="\'Set Due Date\' may change the due date of a card to a random number of days in the future. This labels the \'minimum\' value of this range (inclusive)">From</string>
+    <string name="set_due_date_range_end" comment="\'Set Due Date\' may change the due date of a card to a random number of days in the future. This labels the \'maximum\' value of this range (inclusive)">To</string>
 </resources>

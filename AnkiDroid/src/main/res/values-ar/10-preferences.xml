@@ -168,8 +168,8 @@
     <string name="vertical_centering_summ">محاذاة محتوى البطاقات إلى الوسط عموديًا</string>
     <string name="pref_double_tap_time_interval" maxLength="41">الفاصل الزمني للنقر المزدوج (مللي ثانية)</string>
     <string name="pref_double_tap_time_interval_summary">سيتم تجاهل نقرة ثانية على أزرار الإجابة إذا لم يمر الوقت. يمنع هذا النقر المزدوج غير المقصود</string>
-    <string name="pref_show_answer_long_press" maxLength="41">إظهار الجواب عند الضغط المطول (ملي ثانية)</string>
-    <string name="pref_show_answer_long_press_summary">حد الوقت الأدنى قبل أن يتم تسجيل زر إظهار الجواب. قد يقلل هذا من الضغطات الإضافية غير المقصودة. القيمة الافتراضية هي 0</string>
+    <string name="pref_show_answer_long_press_time" maxLength="41">Show answer long-press time</string>
+    <string name="pref_show_answer_long_press_time_summary">Minimum pressing time before the show answer button registers a touch.</string>
     <string name="show_estimates" maxLength="41">إظهار وقت الأزرار</string>
     <string name="show_estimates_summ">إظهار وقت المراجعة التالية على أزرار الإجابة</string>
     <string name="show_large_answer_buttons" maxLength="41">إظهار أزرار إجابة كبيرة</string>
@@ -183,7 +183,6 @@
     <string name="use_current" maxLength="41">رزمة البطاقات الجديدة</string>
     <string name="learn_cutoff" maxLength="41">حد التعلم المبكر</string>
     <string name="time_limit" maxLength="41">مهلة مربع الوقت</string>
-    <string name="new_timezone" maxLength="41">طريقة المعالجة الجديدة للمناطق الزمنية</string>
     <string name="day_offset_with_description" maxLength="41">بداية اليوم التالي (0 يعني منتصف الليل، 23 يعني الساعة 11 مساءً)</string>
     <plurals name="day_offset_summ" comment="%d is going to be replaced with the number of hours past midnight. It can be replaced if something else suits better the translation">
         <item quantity="zero">%d ساعة بعد منتصف الليل</item>

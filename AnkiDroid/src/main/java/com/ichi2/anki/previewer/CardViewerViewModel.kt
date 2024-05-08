@@ -23,10 +23,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.OnErrorListener
+import com.ichi2.anki.cardviewer.CardMediaPlayer
+import com.ichi2.anki.cardviewer.JavascriptEvaluator
 import com.ichi2.anki.cardviewer.MediaErrorHandler
 import com.ichi2.anki.cardviewer.SoundErrorBehavior
 import com.ichi2.anki.cardviewer.SoundErrorListener
-import com.ichi2.anki.cardviewer.SoundPlayer
 import com.ichi2.anki.launchCatchingIO
 import com.ichi2.libanki.Card
 import com.ichi2.libanki.Sound
@@ -43,7 +44,7 @@ import org.json.JSONObject
 import timber.log.Timber
 
 abstract class CardViewerViewModel(
-    soundPlayer: SoundPlayer
+    cardMediaPlayer: CardMediaPlayer
 ) : ViewModel(), OnErrorListener {
     override val onError = MutableSharedFlow<String>()
     val onMediaError = MutableSharedFlow<String>()
@@ -53,15 +54,17 @@ abstract class CardViewerViewModel(
     val eval = MutableSharedFlow<String>()
 
     val showingAnswer = MutableStateFlow(false)
-    protected val soundPlayer = soundPlayer.apply {
+
+    protected val cardMediaPlayer = cardMediaPlayer.apply {
         setSoundErrorListener(createSoundErrorListener())
+        javascriptEvaluator = { JavascriptEvaluator { launchCatchingIO { eval.emit(it) } } }
     }
     abstract var currentCard: Deferred<Card>
 
     @CallSuper
     override fun onCleared() {
         super.onCleared()
-        soundPlayer.close()
+        cardMediaPlayer.close()
     }
 
     /* *********************************************************************************************
@@ -76,16 +79,22 @@ abstract class CardViewerViewModel(
     abstract fun onPageFinished(isAfterRecreation: Boolean)
 
     fun setSoundPlayerEnabled(isEnabled: Boolean) {
-        soundPlayer.isEnabled = isEnabled
+        cardMediaPlayer.isEnabled = isEnabled
     }
 
     fun playSoundFromUrl(url: String) {
         launchCatchingIO {
             Sound.getAvTag(currentCard.await(), url)?.let {
-                soundPlayer.playOneSound(it)
+                cardMediaPlayer.playOneSound(it)
             }
         }
     }
+
+    fun onVideoFinished() = cardMediaPlayer.onVideoFinished()
+
+    // A coroutine in the cardMediaPlayer waits for the video to complete
+    // This cancels it
+    fun onVideoPaused() = cardMediaPlayer.onVideoPaused()
 
     /* *********************************************************************************************
     *************************************** Internal methods ***************************************
@@ -100,7 +109,10 @@ abstract class CardViewerViewModel(
         typeAnsFilter(prepareCardTextForDisplay(text))
 
     private suspend fun prepareCardTextForDisplay(text: String): String {
-        return Sound.addPlayButtons(withCol { media.escapeMediaFilenames(text) })
+        return Sound.addPlayButtons(
+            text = withCol { media.escapeMediaFilenames(text) },
+            renderOutput = currentCard.await().let { card -> withCol { card.renderOutput(this) } }
+        )
     }
 
     protected open suspend fun showQuestion() {
@@ -130,6 +142,10 @@ abstract class CardViewerViewModel(
     private fun createSoundErrorListener(): SoundErrorListener {
         return object : SoundErrorListener {
             override fun onError(uri: Uri): SoundErrorBehavior {
+                if (uri.scheme != "file") {
+                    return SoundErrorBehavior.CONTINUE_AUDIO
+                }
+
                 val file = uri.toFile()
                 // There is a multitude of transient issues with the MediaPlayer.
                 // Retrying fixes most of these

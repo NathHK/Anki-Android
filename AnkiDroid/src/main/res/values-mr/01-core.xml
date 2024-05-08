@@ -59,7 +59,6 @@
     <!-- DeckPicker.kt -->
     <string name="expand">विस्तृत करा</string>
     <string name="collapse">कोसळणे</string>
-    <string name="study_more">Study more</string>
     <plurals name="reviewer_window_title">
         <item quantity="one">%d minute left</item>
         <item quantity="other">%d minutes left</item>
@@ -128,19 +127,17 @@
     grant AnkiDroid the \'Storage\' permission. This needs to be a fairly generic message as implementations
     of the permissions/app info screen will differ between devices. -->
     <string name="startup_no_storage_permission">कृपया सुरू ठेवण्यासाठी अंकीड्रोइडला ‘स्टोरेज’ परवानगी द्या</string>
-    <string name="rebuild_filtered_deck">फिल्टर केलेले डेक पुन्हा तयार करीत आहे ...</string>
+    <string name="rebuild_filtered_deck">फिल्टर केलेले डेक पुन्हा तयार करीत आहे &#8230;</string>
     <string name="rebuild_cram_label">पुन्हा तयार करा</string>
     <string name="empty_cram_label">रिक्त</string>
     <string name="create_subdeck">सबडेक तयार करा</string>
     <string name="empty_filtered_deck">फिल्टर केलेले डेक रिक्त करत आहे&#8230;</string>
     <string name="custom_study_deck_name">सानुकूल अभ्यास सत्र</string>
     <string name="custom_study_deck_exists">आधी अस्तित्त्वात असलेल्या सानुकूल स्टडी डेकचे नाव बदला</string>
-    <string name="empty_deck">हा डेक रिक्त आहे</string>
     <string name="search_deck" comment="Deck search for selecting it">डेक शोध</string>
+    <string name="empty_deck">हा डेक रिक्त आहे</string>
     <string name="search_for_download_deck" comment="Deck search value for downloading deck">डेक शोध</string>
     <string name="invalid_deck_name">अवैध डेक नाव</string>
-    <string name="studyoptions_limit_reached">Daily study limit reached</string>
-    <string name="studyoptions_empty_schedule">No cards scheduled to study</string>
     <string name="studyoptions_congrats_finished">Congratulations! You have finished for now.</string>
     <string name="studyoptions_no_cards_due">अद्याप कोणतीही कार्ड शिल्लक नाही</string>
     <string name="sd_card_not_mounted">डिव्हाइस संचयन आरोहित नाही</string>
@@ -149,7 +146,7 @@
     <string name="cancel_sync_confirm" tools:ignore="UnusedResources">आपण संकालन रद्द करू इच्छिता?</string>
     <string name="continue_sync" tools:ignore="UnusedResources">संकालन सुरू ठेवा</string>
     <string name="sync_cancelled" tools:ignore="UnusedResources">संकालन रद्द केले</string>
-    <string name="sync_cancel_message" tools:ignore="UnusedResources">रद्द करीत आहे... \n यास काही वेळ लागू शकेल.</string>
+    <string name="sync_cancel_message" tools:ignore="UnusedResources">रद्द करीत आहे&#8230; \n यास काही वेळ लागू शकेल.</string>
     <string name="syncing_media">Syncing media</string>
     <string name="export_deck">निर्यात डेक</string>
     <string name="nothing">काही नाही</string>
@@ -256,4 +253,5 @@
     <string name="storage_access_summary">Saves your collection in a safe place that will not be deleted if the app is uninstalled</string>
     <string name="all_files_access_title" comment="Name of the “All files access” permission from Android 10 and after">All files access</string>
     <string name="image_occlusion">Image Occlusion</string>
+    <string name="remove_account" comment="open a website to start the deletion of an AnkiWeb account">Remove account</string>
 </resources>

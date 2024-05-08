@@ -168,7 +168,7 @@
     <string name="import_interrupted">Importação interrompida: AnkiDroid foi fechado</string>
     <string name="export_preparation_in_progress">Preparando exportação&#8230;</string>
     <string name="export_ready_title">Exportação pronta</string>
-    <string name="export_send_no_handlers">Nenhum aplicativo disponível para lidar com apkg. Salvando...</string>
+    <string name="export_send_no_handlers">Nenhum aplicativo disponível para lidar com apkg. Salvando&#8230;</string>
     <string name="export_save_apkg_successful">Arquivo Anki (.apkg) salvo com sucesso</string>
     <string name="export_save_apkg_unsuccessful">Arquivo Anki (.apkg) não pode ser salvo</string>
     <string name="export_share_title">Enviar pacote Anki usando</string>
@@ -313,6 +313,7 @@
     <string name="expand_tag">Expandir tag \'%s\'</string>
     <!-- Manage note types -->
     <string name="field_editor_model_not_available">Não foi possível acessar a coleção. Tente novamente!</string>
+    <string name="cd_manage_notetypes_add">Adicionar um novo modelo</string>
     <!-- App Intro -->
     <string name="intro_ankidroid_tagline_one">Estude menos</string>
     <string name="intro_ankidroid_tagline_two">Lembre mais</string>

@@ -168,7 +168,7 @@
     <string name="import_interrupted">Importación interrumpida</string>
     <string name="export_preparation_in_progress">Preparando la exportación&#8230;</string>
     <string name="export_ready_title">Exportación preparada</string>
-    <string name="export_send_no_handlers">No hay aplicaciones disponibles para manejar apkg. Guardando...</string>
+    <string name="export_send_no_handlers">No hay aplicaciones disponibles para manejar apkg. Guardando&#8230;</string>
     <string name="export_save_apkg_successful">Paquete Anki guardado correctamente</string>
     <string name="export_save_apkg_unsuccessful">Error al guardar el paquete Anki</string>
     <string name="export_share_title">Enviar paquete Anki usando</string>
@@ -313,6 +313,7 @@
     <string name="expand_tag">Expandir etiqueta \'%s\'</string>
     <!-- Manage note types -->
     <string name="field_editor_model_not_available">Error al acceder a la colección. ¡Por favor, vuelve a intentarlo!</string>
+    <string name="cd_manage_notetypes_add">Add a new note type</string>
     <!-- App Intro -->
     <string name="intro_ankidroid_tagline_one">Estudia menos</string>
     <string name="intro_ankidroid_tagline_two">Recuerda más</string>
